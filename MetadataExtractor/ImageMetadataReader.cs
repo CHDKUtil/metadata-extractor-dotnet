@@ -39,6 +39,7 @@ using MetadataExtractor.Formats.Raf;
 using MetadataExtractor.Formats.Tiff;
 using MetadataExtractor.Formats.WebP;
 using MetadataExtractor.Formats.Avi;
+using MetadataExtractor.Formats.Mlv;
 using MetadataExtractor.Util;
 
 #if NET35
@@ -126,6 +127,8 @@ namespace MetadataExtractor
                     return Append(QuickTimeMetadataReader.ReadMetadata(stream), fileTypeDirectory);
                 case FileType.Netpbm:
                     return new Directory[] { NetpbmMetadataReader.ReadMetadata(stream), fileTypeDirectory };
+                case FileType.Mlv:
+                    return Append(MlvMetadataReader.ReadMetadata(stream), fileTypeDirectory);
                 case FileType.Unknown:
                     throw new ImageProcessingException("File format could not be determined");
                 case FileType.Riff:

@@ -280,6 +280,42 @@ namespace MetadataExtractor
 
         #endregion
 
+        #region UInt64
+
+        [Pure]
+        public static ulong GetUInt64(this Directory directory, int tagType)
+        {
+            if (directory.TryGetUInt64(tagType, out ulong value))
+                return value;
+
+            return ThrowValueNotPossible<ulong>(directory, tagType);
+        }
+
+        [Pure]
+        public static bool TryGetUInt64(this Directory directory, int tagType, out ulong value)
+        {
+            var convertible = GetConvertibleObject(directory, tagType);
+
+            if (convertible != null)
+            {
+                try
+                {
+                    value = convertible.ToUInt64(null);
+                    return true;
+                }
+                catch
+                {
+                    // ignored
+                    // ignored
+                }
+            }
+
+            value = default;
+            return false;
+        }
+
+        #endregion
+
         #region Single
 
         /// <summary>Returns a tag's value as a <see cref="float"/>, or throws if conversion is not possible.</summary>

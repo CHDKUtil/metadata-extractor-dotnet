@@ -75,6 +75,7 @@ namespace MetadataExtractor.Util
             { FileType.Orf, Encoding.UTF8.GetBytes("IIRS"), new byte[] { 0x08, 0x00 } },
             { FileType.Raf, Encoding.UTF8.GetBytes("FUJIFILMCCD-RAW") },
             { FileType.Rw2, Encoding.UTF8.GetBytes("II"), new byte[] { 0x55, 0x00 } },
+            { FileType.Mlv, Encoding.UTF8.GetBytes("MLVI") },
         };
 
         private static readonly IEnumerable<Func<byte[], FileType>> _fixedCheckers = new Func<byte[], FileType>[]

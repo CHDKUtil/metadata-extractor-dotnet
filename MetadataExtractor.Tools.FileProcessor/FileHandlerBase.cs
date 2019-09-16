@@ -15,7 +15,8 @@ namespace MetadataExtractor.Tools.FileProcessor
             "mp3",
             "j2c", "jp2", "jpf", "jpm", "mj2",
             "3g2", "3gp", "m4v", "mov", "mp4", "m2v", "mts",
-            "pbm", "pnm", "pgm", "ppm"
+            "pbm", "pnm", "pgm", "ppm",
+            "mlv", "idx"
         };
 
         private int _processedFileCount;

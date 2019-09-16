@@ -99,7 +99,10 @@ namespace MetadataExtractor.Util
 
         /// <summary>Canon camera raw (version 3).</summary>
         /// <remarks>Shared by CR3 (image) and CRM (video).</remarks>
-        Crx = 22
+        Crx = 22,
+
+        /// <summary>Magic Lantern movie.</summary>
+        Mlv = 23
     }
 
     public static class FileTypeExtensions
@@ -128,7 +131,8 @@ namespace MetadataExtractor.Util
             "RW2",
             "QuickTime",
             "Netpbm",
-            "CRX"
+            "CRX",
+            "MLV"
         };
         
         private static readonly string[] _longNames =
@@ -155,7 +159,8 @@ namespace MetadataExtractor.Util
             "Panasonic Camera Raw",
             "QuickTime",
             "Netpbm",
-            "Canon Camera Raw"
+            "Canon Camera Raw",
+            "Magic Lantern Movie"
         };
 
         private static readonly string?[] _mimeTypes =
@@ -182,6 +187,7 @@ namespace MetadataExtractor.Util
             null,
             "video/quicktime",
             "image/x-portable-graymap",
+            null,
             null
         };
 
@@ -209,7 +215,8 @@ namespace MetadataExtractor.Util
             new[] { "rw2" },
             new[] { "mov" },
             new[] { "pbm", "ppm" },
-            new[] { "cr3", "crm" }
+            new[] { "cr3", "crm" },
+            new[] { "mlv", "idx" }
         };
         
         public static string GetName(this FileType fileType)
