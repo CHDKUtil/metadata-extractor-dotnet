@@ -51,6 +51,7 @@ namespace MetadataExtractor.Formats.Mlv
                 { "EXPO", d => new MlvExpoHandler(d) },
                 { "LENS", d => new MlvLensHandler(d) },
                 { "VERS", d => new MlvVersionHandler(d) },
+                { "WAVI", d => new MlvWavHandler(d) },
                 { "AUDF", d => MlvStopHandler.Instance },
                 { "VIDF", d => MlvStopHandler.Instance },
             };
