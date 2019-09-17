@@ -24,6 +24,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
@@ -375,13 +376,21 @@ namespace MetadataExtractor.Formats.Png
                     {
                         yield return new XmpReader().Extract(textBytes, 0, byteCount);
                     }
+                    else
+                    {
+                        yield return ReadTextDirectory(keyword, textBytes, chunkType);
+                    }
                 }
                 else if (keyword == "Raw profile type exif" || keyword == "Raw profile type APP1")
                 {
                     if (TryProcessRawProfile(out _))
                     {
                         foreach (var exifDirectory in new ExifReader().Extract(new ByteArrayReader(textBytes)))
-                            yield return exifDirectory; 
+                            yield return exifDirectory;
+                    }
+                    else
+                    {
+                        yield return ReadTextDirectory(keyword, textBytes, chunkType);
                     }
                 }
                 else if (keyword == "Raw profile type icc" || keyword == "Raw profile type icm")
@@ -390,6 +399,10 @@ namespace MetadataExtractor.Formats.Png
                     {
                         yield return new IccReader().Extract(new ByteArrayReader(textBytes));
                     }
+                    else
+                    {
+                        yield return ReadTextDirectory(keyword, textBytes, chunkType);
+                    }
                 }
                 else if (keyword == "Raw profile type iptc")
                 {
@@ -397,13 +410,22 @@ namespace MetadataExtractor.Formats.Png
                     {
                         yield return new IptcReader().Extract(new SequentialByteArrayReader(textBytes), byteCount);
                     }
+                    else
+                    {
+                        yield return ReadTextDirectory(keyword, textBytes, chunkType);
+                    }
                 }
                 else
                 {
+                    yield return ReadTextDirectory(keyword, textBytes, chunkType);
+                }
+
+                PngDirectory ReadTextDirectory(string keyword, byte[] textBytes, PngChunkType pngChunkType)
+                {
                     var textPairs = new[] { new KeyValuePair(keyword, new StringValue(textBytes, _latin1Encoding)) };
-                    var directory = new PngDirectory(chunkType);
+                    var directory = new PngDirectory(pngChunkType);
                     directory.Set(PngDirectory.TagTextualData, textPairs);
-                    yield return directory;
+                    return directory;
                 }
 
                 bool TryProcessRawProfile(out int byteCount)
@@ -456,22 +478,57 @@ namespace MetadataExtractor.Formats.Png
 
                     // We should be at the ASCII-encoded hex data. Walk through the remaining bytes, re-writing as raw bytes
                     // starting at offset zero in the array. We have to skip \n characters.
-                    byteCount = length;
-                    var writeIndex = 0;
-                    while (length > 0)
+
+                    // Validate the data can be correctly parsed before modifying it in-place, because if parsing fails later
+                    // consumers may want the unmodified data.
+
+                    // Each row must have 72 characters (36 bytes once decoded) separated by \n
+                    const int rowCharCount = 72;
+                    int charsInRow = rowCharCount;
+
+                    for (int j = i; j < length + i; j++)
                     {
-                        var c1 = textBytes[i++];
+                        byte c = textBytes[j];
 
-                        if (c1 == '\n')
+                        if (charsInRow-- == 0)
+                        {
+                            if (c != '\n')
+                            {
+                                byteCount = default;
+                                return false;
+                            }
+
+                            charsInRow = rowCharCount;
                             continue;
+                        }
 
-                        var c2 = textBytes[i++];
-
-                        if (!TryParseHexNibble(c1, out int n1) || !TryParseHexNibble(c2, out int n2))
+                        if ((c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F'))
                         {
                             byteCount = default;
                             return false;
                         }
+                    }
+
+                    byteCount = length;
+                    var writeIndex = 0;
+                    charsInRow = rowCharCount;
+                    while (length > 0)
+                    {
+                        var c1 = textBytes[i++];
+
+                        if (charsInRow-- == 0)
+                        {
+                            Debug.Assert(c1 == '\n');
+                            charsInRow = rowCharCount;
+                            continue;
+                        }
+
+                        var c2 = textBytes[i++];
+
+                        charsInRow--;
+
+                        var n1 = ParseHexNibble(c1);
+                        var n2 = ParseHexNibble(c2);
 
                         length--;
                         textBytes[writeIndex++] = (byte) ((n1 << 4) | n2);
@@ -479,28 +536,25 @@ namespace MetadataExtractor.Formats.Png
 
                     return writeIndex == byteCount;
 
-                    static bool TryParseHexNibble(int h, out int n)
+                    static int ParseHexNibble(int h)
                     {
                         if (h >= '0' && h <= '9')
                         {
-                            n = h - '0';
-                            return true;
+                            return h - '0';
                         }
 
                         if (h >= 'a' && h <= 'f')
                         {
-                            n = 10 + (h - 'a');
-                            return true;
+                            return 10 + (h - 'a');
                         }
 
                         if (h >= 'A' && h <= 'F')
                         {
-                            n = 10 + (h - 'A');
-                            return true;
+                            return 10 + (h - 'A');
                         }
 
-                        n = default;
-                        return false;
+                        Debug.Fail("Should not reach here");
+                        throw new InvalidOperationException();
                     }
                 }
             }
