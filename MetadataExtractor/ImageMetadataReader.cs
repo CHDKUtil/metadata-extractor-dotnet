@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.IO;
 using MetadataExtractor.Formats.Bmp;
+using MetadataExtractor.Formats.Crx;
 using MetadataExtractor.Formats.FileSystem;
 using MetadataExtractor.Formats.FileType;
 using MetadataExtractor.Formats.Gif;
@@ -103,8 +104,9 @@ namespace MetadataExtractor
                 case FileType.Raf:
                     return Append(RafMetadataReader.ReadMetadata(stream), fileTypeDirectory);
                 case FileType.QuickTime:
-                case FileType.Crx:
                     return Append(QuickTimeMetadataReader.ReadMetadata(stream), fileTypeDirectory);
+                case FileType.Crx:
+                    return Append(CrxMetadataReader.ReadMetadata(stream), fileTypeDirectory);
                 case FileType.Netpbm:
                     return new Directory[] { NetpbmMetadataReader.ReadMetadata(stream), fileTypeDirectory };
                 case FileType.Unknown:

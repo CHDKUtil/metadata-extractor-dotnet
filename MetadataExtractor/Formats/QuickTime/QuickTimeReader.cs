@@ -90,9 +90,9 @@ namespace MetadataExtractor.Formats.QuickTime
         /// Reads atom data from <paramref name="stream"/>, invoking <paramref name="handler"/> for each atom encountered.
         /// </summary>
         /// <param name="stream">The stream to read atoms from.</param>
-        /// <param name="handler">A callback function to handle each atom.</param>
+        /// <param name="handler">The handler to handle each atom.</param>
         /// <param name="stopByBytes">The maximum number of bytes to process before discontinuing.</param>
-        public static void ProcessAtoms(Stream stream, Action<AtomCallbackArgs> handler, long stopByBytes = -1)
+        public static void ProcessAtoms(Stream stream, IQuickTimeHandler handler, long stopByBytes = -1)
         {
             var reader = new SequentialStreamReader(stream);
 
@@ -132,7 +132,7 @@ namespace MetadataExtractor.Formats.QuickTime
 
                     var args = new AtomCallbackArgs(atomType, atomSize, stream, atomStartPos, reader);
 
-                    handler(args);
+                    handler.ProcessAtom(args);
 
                     if (args.Cancel)
                         return;

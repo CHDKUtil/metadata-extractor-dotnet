@@ -6,13 +6,14 @@ using MetadataExtractor.Formats.Tiff;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace MetadataExtractor.Formats.QuickTime
+namespace MetadataExtractor.Formats.Crx
 {
-    public sealed class QuickTimeTiffHandler<T, TParent> : ExifTiffHandler
+    /// <author>Dmitry Shechtman</author>
+    public sealed class CrxTiffHandler<T, TParent> : ExifTiffHandler
         where T : Directory, new()
         where TParent : Directory
     {
-        public QuickTimeTiffHandler([NotNull] List<Directory> directories)
+        public CrxTiffHandler([NotNull] List<Directory> directories)
             : base(directories)
         {
         }
