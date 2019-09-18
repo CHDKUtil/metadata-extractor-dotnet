@@ -21,13 +21,14 @@ namespace MetadataExtractor.Formats.QuickTime
             _directories = directories;
         }
 
-        public void ProcessAtom(Stream stream, SequentialReader reader, int atomSize)
+        public bool ProcessAtom(Stream stream, SequentialReader reader, long atomSize)
         {
             var directory = new T();
             Populate(directory, reader, atomSize);
             _directories.Add(directory);
+            return true;
         }
 
-        protected abstract void Populate(T directory, SequentialReader reader, int atomSize);
+        protected abstract void Populate(T directory, SequentialReader reader, long atomSize);
     }
 }

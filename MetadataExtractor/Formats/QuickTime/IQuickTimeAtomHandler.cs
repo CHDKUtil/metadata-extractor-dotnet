@@ -11,6 +11,6 @@ namespace MetadataExtractor.Formats.QuickTime
     /// <author>Dmitry Shechtman</author>
     public interface IQuickTimeAtomHandler
     {
-        void ProcessAtom(Stream stream, SequentialReader reader, int atomSize);
+        bool ProcessAtom(Stream stream, SequentialReader reader, long atomSize);
     }
 }

@@ -12,7 +12,7 @@ namespace MetadataExtractor.Formats.QuickTime
         {
         }
 
-        protected override void Populate(QuickTimeFileTypeDirectory directory, SequentialReader reader, int atomSize)
+        protected override void Populate(QuickTimeFileTypeDirectory directory, SequentialReader reader, long atomSize)
         {
             directory.Set(QuickTimeFileTypeDirectory.TagMajorBrand, reader.Get4ccString());
             directory.Set(QuickTimeFileTypeDirectory.TagMinorVersion, reader.GetUInt32());

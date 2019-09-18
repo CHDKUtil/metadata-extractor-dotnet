@@ -23,17 +23,18 @@ namespace MetadataExtractor.Formats.QuickTime
             _handlers = handlers;
         }
 
-        public virtual void ProcessAtom(Stream stream, SequentialReader reader, int atomSize)
+        public virtual bool ProcessAtom(Stream stream, SequentialReader reader, long atomSize)
         {
             QuickTimeReader.ProcessAtoms(stream, this, atomSize);
+            return true;
         }
 
-        void IQuickTimeHandler.ProcessAtom(AtomCallbackArgs a)
+        bool IQuickTimeHandler.ProcessAtom(string fourCc, Stream stream, SequentialReader reader, long atomSize)
         {
-            if (!_handlers.TryGetValue(a.TypeString, out var createHandler))
-                return;
+            if (!_handlers.TryGetValue(fourCc, out var createHandler))
+                return true;
             var handler = createHandler(_directories);
-            handler.ProcessAtom(a.Stream, a.Reader, (int)a.BytesLeft);
+            return handler.ProcessAtom(stream, reader, atomSize);
         }
     }
 }

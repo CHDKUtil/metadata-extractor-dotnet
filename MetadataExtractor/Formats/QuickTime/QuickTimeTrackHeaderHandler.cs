@@ -15,7 +15,7 @@ namespace MetadataExtractor.Formats.QuickTime
         {
         }
 
-        protected override void Populate(QuickTimeTrackHeaderDirectory directory, SequentialReader reader, int atomSize)
+        protected override void Populate(QuickTimeTrackHeaderDirectory directory, SequentialReader reader, long atomSize)
         {
             directory.Set(QuickTimeTrackHeaderDirectory.TagVersion, reader.GetByte());
             directory.Set(QuickTimeTrackHeaderDirectory.TagFlags, reader.GetBytes(3));

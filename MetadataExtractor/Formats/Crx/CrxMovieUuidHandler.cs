@@ -27,7 +27,7 @@ namespace MetadataExtractor.Formats.Crx
         {
         }
 
-        public override void ProcessAtom(Stream stream, SequentialReader reader, int atomSize)
+        public override bool ProcessAtom(Stream stream, SequentialReader reader, long atomSize)
         {
             if (atomSize >= CRX.Length)
             {
@@ -35,6 +35,7 @@ namespace MetadataExtractor.Formats.Crx
                 if (CRX.RegionEquals(0, CRX.Length, uuid))
                     base.ProcessAtom(stream, reader, atomSize - CRX.Length);
             }
+            return true;
         }
     }
 }

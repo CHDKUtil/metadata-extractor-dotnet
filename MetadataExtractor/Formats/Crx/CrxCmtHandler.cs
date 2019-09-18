@@ -18,11 +18,12 @@ namespace MetadataExtractor.Formats.Crx
             _directories = directories;
         }
 
-        public void ProcessAtom(System.IO.Stream stream, SequentialReader reader, int atomSize)
+        public bool ProcessAtom(System.IO.Stream stream, SequentialReader reader, long atomSize)
         {
             var handler = CreateTiffHandler();
             var indexedReader = new IndexedSeekingReader(stream, (int)reader.Position);
             TiffReader.ProcessTiff(indexedReader, handler);
+            return true;
         }
 
         protected abstract ITiffHandler CreateTiffHandler();

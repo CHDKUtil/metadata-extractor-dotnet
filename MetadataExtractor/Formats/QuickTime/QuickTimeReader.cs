@@ -2,82 +2,11 @@
 
 using System;
 using System.IO;
-using System.Linq;
 using System.Text;
 using MetadataExtractor.IO;
 
 namespace MetadataExtractor.Formats.QuickTime
 {
-    /// <summary>
-    /// Models data provided to callbacks invoked when reading QuickTime atoms via <see cref="QuickTimeReader.ProcessAtoms"/>.
-    /// </summary>
-    public sealed class AtomCallbackArgs
-    {
-        /// <summary>
-        /// Gets the 32-bit unsigned integer that identifies the atom's type.
-        /// </summary>
-        public uint Type { get; }
-
-        /// <summary>
-        /// The length of the atom data, in bytes. If the atom extends to the end of the file, this value is zero.
-        /// </summary>
-        public long Size { get; }
-
-        /// <summary>
-        /// Gets the stream from which atoms are being read.
-        /// </summary>
-        public Stream Stream { get; }
-
-        /// <summary>
-        /// Gets the position within <see cref="Stream"/> at which this atom's data started.
-        /// </summary>
-        public long StartPosition { get; }
-
-        /// <summary>
-        /// Gets a sequential reader from which this atom's contents may be read.
-        /// </summary>
-        /// <remarks>
-        /// It is backed by <see cref="Stream"/>, so manipulating the stream's position will influence this reader.
-        /// </remarks>
-        public SequentialStreamReader Reader { get; }
-
-        /// <summary>
-        /// Gets and sets whether the callback wishes processing to terminate.
-        /// </summary>
-        public bool Cancel { get; set; }
-
-        public AtomCallbackArgs(uint type, long size, Stream stream, long startPosition, SequentialStreamReader reader)
-        {
-            Type = type;
-            Size = size;
-            Stream = stream;
-            StartPosition = startPosition;
-            Reader = reader;
-        }
-
-        /// <summary>
-        /// Gets the string representation of this atom's type.
-        /// </summary>
-        public string TypeString
-        {
-            get
-            {
-                var bytes = BitConverter.GetBytes(Type);
-                bytes = bytes.Reverse().ToArray();
-#if NETSTANDARD1_3
-                return Encoding.UTF8.GetString(bytes, 0, bytes.Length);
-#else
-                return Encoding.ASCII.GetString(bytes);
-#endif
-            }
-        }
-
-        /// <summary>
-        /// Computes the number of bytes remaining in the atom, given the <see cref="Stream"/> position.
-        /// </summary>
-        public long BytesLeft => Size - (Stream.Position - StartPosition);
-    }
-
     /// <summary>
     /// Static class for processing atoms the QuickTime container format.
     /// </summary>
@@ -113,7 +42,7 @@ namespace MetadataExtractor.Formats.QuickTime
 
                     // Typically four ASCII characters, but may be non-printable.
                     // By convention, lowercase 4CCs are reserved by Apple.
-                    var atomType = reader.GetUInt32();
+                    var fourCc = reader.GetString(4, Encoding.UTF8);
 
                     if (atomSize == 1)
                     {
@@ -130,11 +59,7 @@ namespace MetadataExtractor.Formats.QuickTime
                         return;
                     }
 
-                    var args = new AtomCallbackArgs(atomType, atomSize, stream, atomStartPos, reader);
-
-                    handler.ProcessAtom(args);
-
-                    if (args.Cancel)
+                    if (!handler.ProcessAtom(fourCc, stream, reader, atomSize - 8))
                         return;
 
                     if (atomSize == 0)

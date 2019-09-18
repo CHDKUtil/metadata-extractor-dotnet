@@ -15,7 +15,7 @@ namespace MetadataExtractor.Formats.QuickTime
         {
         }
 
-        protected override void Populate(QuickTimeMovieHeaderDirectory directory, SequentialReader reader, int atomSize)
+        protected override void Populate(QuickTimeMovieHeaderDirectory directory, SequentialReader reader, long atomSize)
         {
             directory.Set(QuickTimeMovieHeaderDirectory.TagVersion, reader.GetByte());
             directory.Set(QuickTimeMovieHeaderDirectory.TagFlags, reader.GetBytes(3));

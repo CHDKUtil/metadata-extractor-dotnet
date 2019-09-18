@@ -23,19 +23,20 @@ namespace MetadataExtractor.Formats.Crx
             _directories = directories;
         }
 
-        public void ProcessAtom(Stream stream, SequentialReader reader, int atomSize)
+        public bool ProcessAtom(Stream stream, SequentialReader reader, long atomSize)
         {
             if (atomSize >= XMP.Length)
             {
                 var uuid = reader.GetBytes(XMP.Length);
                 if (XMP.RegionEquals(0, XMP.Length, uuid))
                 {
-                    var xmpBytes = reader.GetNullTerminatedBytes(atomSize - XMP.Length);
+                    var xmpBytes = reader.GetNullTerminatedBytes((int)atomSize - XMP.Length);
                     var xmpDirectory = new XmpReader().Extract(xmpBytes);
                     xmpDirectory.Parent = _directories.OfType<ExifIfd0Directory>().SingleOrDefault();
                     _directories.Add(xmpDirectory);
                 }
             }
+            return true;
         }
     }
 }
