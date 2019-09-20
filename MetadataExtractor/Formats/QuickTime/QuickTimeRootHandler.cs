@@ -34,6 +34,7 @@ namespace MetadataExtractor.Formats.QuickTime
             : base(directories, new Dictionary<string, Func<List<Directory>, IQuickTimeAtomHandler>>
             {
                 { "moov", d => new QuickTimeMovieHandler(d) },
+                { "uuid", d => new QuickTimeUuidHandler(d) },
                 { "ftyp", d => new QuickTimeFileTypeHandler(d) }
             })
         {
