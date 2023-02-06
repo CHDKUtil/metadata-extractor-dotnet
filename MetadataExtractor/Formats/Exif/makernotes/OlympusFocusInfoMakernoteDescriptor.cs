@@ -1,27 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Diagnostics.CodeAnalysis;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -102,7 +79,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         public string? GetExternalFlashDescription()
         {
-            if (!(Directory.GetObject(OlympusFocusInfoMakernoteDirectory.TagExternalFlash) is ushort[] values) || values.Length < 2)
+            if (Directory.GetObject(OlympusFocusInfoMakernoteDirectory.TagExternalFlash) is not ushort[] values || values.Length < 2)
                 return null;
 
             var join = $"{values[0]} {values[1]}";
@@ -124,7 +101,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         public string? GetExternalFlashZoomDescription()
         {
             var values = Directory.GetObject(OlympusFocusInfoMakernoteDirectory.TagExternalFlashZoom) as ushort[];
-            if (values == null)
+            if (values is null)
             {
                 // check if it's only one value long also
                 if (!Directory.TryGetInt16(OlympusFocusInfoMakernoteDirectory.TagExternalFlashZoom, out short value))
@@ -151,7 +128,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         public string? GetManualFlashDescription()
         {
-            if (!(Directory.GetObject(OlympusFocusInfoMakernoteDirectory.TagManualFlash) is short[] values))
+            if (Directory.GetObject(OlympusFocusInfoMakernoteDirectory.TagManualFlash) is not short[] values)
                 return null;
 
             if (values[0] == 0)
@@ -184,7 +161,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         public string? GetImageStabilizationDescription()
         {
             var values = Directory.GetByteArray(OlympusFocusInfoMakernoteDirectory.TagImageStabilization);
-            if (values == null)
+            if (values is null)
                 return null;
 
             if ((values[0] | values[1] | values[2] | values[3]) == 0x0)

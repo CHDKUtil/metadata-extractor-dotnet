@@ -1,29 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Diagnostics.CodeAnalysis;
-using Xunit;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Tests
 {
@@ -47,8 +22,6 @@ namespace MetadataExtractor.Tests
         }
 
         [Fact]
-        [SuppressMessage("ReSharper", "EqualExpressionComparison")]
-        [SuppressMessage("ReSharper", "SuspiciousTypeConversion.Global")]
         public void EqualsAndHashCode()
         {
             var age1 = new Age(10, 11, 12, 13, 14, 15);
@@ -65,6 +38,39 @@ namespace MetadataExtractor.Tests
             Assert.Equal(age1.GetHashCode(), age1.GetHashCode());
             Assert.Equal(age1.GetHashCode(), age2.GetHashCode());
             Assert.False(age1.GetHashCode() == age3.GetHashCode());
+        }
+
+        [Fact]
+        public void ParseInvalid()
+        {
+            Assert.Throws<ArgumentNullException>(() => Age.FromPanasonicString(null!));
+
+            Assert.Null(Age.FromPanasonicString(""));
+            Assert.Null(Age.FromPanasonicString("9999:99:99 00:00:00"));
+            Assert.Null(Age.FromPanasonicString("9999:99:99 00:00:00"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00:00:0"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00:00:"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00:00"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00:0"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00:"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 0"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 "));
+            Assert.Null(Age.FromPanasonicString("0031:07:15"));
+            Assert.Null(Age.FromPanasonicString("0031:07:1"));
+            Assert.Null(Age.FromPanasonicString("0031:07:"));
+            Assert.Null(Age.FromPanasonicString("0031:07"));
+            Assert.Null(Age.FromPanasonicString("0031:0"));
+            Assert.Null(Age.FromPanasonicString("0031:"));
+            Assert.Null(Age.FromPanasonicString("0031"));
+            Assert.Null(Age.FromPanasonicString("003"));
+            Assert.Null(Age.FromPanasonicString("00"));
+            Assert.Null(Age.FromPanasonicString("0"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00:00:0a"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00:00:a"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00:0a:00"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 00:a:00"));
+            Assert.Null(Age.FromPanasonicString("0031:07:15 0a:00:00"));
         }
     }
 }

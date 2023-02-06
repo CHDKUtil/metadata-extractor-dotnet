@@ -1,32 +1,5 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using MetadataExtractor.IO;
 using MetadataExtractor.Formats.Icc;
 
 #if NET35
@@ -145,7 +118,7 @@ namespace MetadataExtractor.Formats.Bmp
             }
             catch (IOException)
             {
-                if (directory == null)
+                if (directory is null)
                     AddError("Unable to read BMP file header", directories);
                 else
                     directory.AddError("Unable to read BMP file header");
@@ -271,28 +244,31 @@ namespace MetadataExtractor.Formats.Bmp
                  */
 
                 if (headerSize == 12 && bitmapType == (int)BmpHeaderDirectory.BitmapType.Bitmap)
-                { //BITMAPCOREHEADER
-                  /*
-                   * There's no way to tell BITMAPCOREHEADER and OS21XBITMAPHEADER
-                   * apart for the "standard" bitmap type. The difference is only
-                   * that BITMAPCOREHEADER has signed width and height while
-                   * in OS21XBITMAPHEADER they are unsigned. Since BITMAPCOREHEADER,
-                   * the Windows version, is most common, read them as signed.
-                   */
+                {
+                    //BITMAPCOREHEADER
+                    /*
+                     * There's no way to tell BITMAPCOREHEADER and OS21XBITMAPHEADER
+                     * apart for the "standard" bitmap type. The difference is only
+                     * that BITMAPCOREHEADER has signed width and height while
+                     * in OS21XBITMAPHEADER they are unsigned. Since BITMAPCOREHEADER,
+                     * the Windows version, is most common, read them as signed.
+                     */
                     directory.Set(BmpHeaderDirectory.TagImageWidth, reader.GetInt16());
                     directory.Set(BmpHeaderDirectory.TagImageHeight, reader.GetInt16());
                     directory.Set(BmpHeaderDirectory.TagColourPlanes, reader.GetUInt16());
                     directory.Set(BmpHeaderDirectory.TagBitsPerPixel, reader.GetUInt16());
                 }
                 else if (headerSize == 12)
-                { // OS21XBITMAPHEADER
+                {
+                    // OS21XBITMAPHEADER
                     directory.Set(BmpHeaderDirectory.TagImageWidth, reader.GetUInt16());
                     directory.Set(BmpHeaderDirectory.TagImageHeight, reader.GetUInt16());
                     directory.Set(BmpHeaderDirectory.TagColourPlanes, reader.GetUInt16());
                     directory.Set(BmpHeaderDirectory.TagBitsPerPixel, reader.GetUInt16());
                 }
                 else if (headerSize == 16 || headerSize == 64)
-                { // OS22XBITMAPHEADER
+                {
+                    // OS22XBITMAPHEADER
                     directory.Set(BmpHeaderDirectory.TagImageWidth, reader.GetInt32());
                     directory.Set(BmpHeaderDirectory.TagImageHeight, reader.GetInt32());
                     directory.Set(BmpHeaderDirectory.TagColourPlanes, reader.GetUInt16());
@@ -319,7 +295,8 @@ namespace MetadataExtractor.Formats.Bmp
                 else if (
                   headerSize == 40 || headerSize == 52 || headerSize == 56 ||
                   headerSize == 108 || headerSize == 124)
-                { // BITMAPINFOHEADER V1-5
+                {
+                    // BITMAPINFOHEADER V1-5
                     directory.Set(BmpHeaderDirectory.TagImageWidth, reader.GetInt32());
                     directory.Set(BmpHeaderDirectory.TagImageHeight, reader.GetInt32());
                     directory.Set(BmpHeaderDirectory.TagColourPlanes, reader.GetUInt16());
@@ -332,19 +309,22 @@ namespace MetadataExtractor.Formats.Bmp
                     directory.Set(BmpHeaderDirectory.TagPaletteColourCount, reader.GetInt32());
                     directory.Set(BmpHeaderDirectory.TagImportantColourCount, reader.GetInt32());
                     if (headerSize == 40)
-                    { // BITMAPINFOHEADER end
+                    {
+                        // BITMAPINFOHEADER end
                         return;
                     }
                     directory.Set(BmpHeaderDirectory.TagRedMask, reader.GetUInt32());
                     directory.Set(BmpHeaderDirectory.TagGreenMask, reader.GetUInt32());
                     directory.Set(BmpHeaderDirectory.TagBlueMask, reader.GetUInt32());
                     if (headerSize == 52)
-                    { // BITMAPV2INFOHEADER end
+                    {
+                        // BITMAPV2INFOHEADER end
                         return;
                     }
                     directory.Set(BmpHeaderDirectory.TagAlphaMask, reader.GetUInt32());
                     if (headerSize == 56)
-                    { // BITMAPV3INFOHEADER end
+                    {
+                        // BITMAPV3INFOHEADER end
                         return;
                     }
                     long csType = reader.GetUInt32();
@@ -354,7 +334,8 @@ namespace MetadataExtractor.Formats.Bmp
                     directory.Set(BmpHeaderDirectory.TagGammaGreen, reader.GetUInt32());
                     directory.Set(BmpHeaderDirectory.TagGammaBlue, reader.GetUInt32());
                     if (headerSize == 108)
-                    { // BITMAPV4HEADER end
+                    {
+                        // BITMAPV4HEADER end
                         return;
                     }
                     directory.Set(BmpHeaderDirectory.TagIntent, reader.GetInt32());
@@ -406,8 +387,8 @@ namespace MetadataExtractor.Formats.Bmp
 
         private static void AddError(string errorMessage, List<Directory> directories)
         {
-            ErrorDirectory directory = directories.OfType<ErrorDirectory>().FirstOrDefault();
-            if (directory == null)
+            ErrorDirectory? directory = directories.OfType<ErrorDirectory>().FirstOrDefault();
+            if (directory is null)
                 directories.Add(new ErrorDirectory(errorMessage));
             else
                 directory.AddError(errorMessage);

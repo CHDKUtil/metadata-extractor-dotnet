@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Tools.FileProcessor
 {
@@ -14,8 +11,9 @@ namespace MetadataExtractor.Tools.FileProcessor
             "tif", "tiff", "psd", "dng",
             "mp3",
             "j2c", "jp2", "jpf", "jpm", "mj2",
-            "3g2", "3gp", "m4v", "mov", "mp4", "m2v", "mts",
-            "pbm", "pnm", "pgm", "ppm"
+            "3g2", "3gp", "m4v", "mov", "mp4", "m2v", "m2ts", "mts",
+            "pbm", "pnm", "pgm", "ppm",
+            "tga", "icb", "vda", "vst"
         };
 
         private int _processedFileCount;

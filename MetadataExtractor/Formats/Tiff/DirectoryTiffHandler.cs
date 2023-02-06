@@ -1,30 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Collections.Generic;
-using System.Linq;
-using MetadataExtractor.IO;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Tiff
 {
@@ -34,18 +8,20 @@ namespace MetadataExtractor.Formats.Tiff
     /// <author>Drew Noakes https://drewnoakes.com</author>
     public abstract class DirectoryTiffHandler : ITiffHandler
     {
-        private readonly Stack<Directory> _directoryStack = new Stack<Directory>();
+        private readonly Stack<Directory> _directoryStack = new();
 
         protected List<Directory> Directories { get; }
 
         protected Directory? CurrentDirectory { get; private set; }
+
+        public object? Kind => CurrentDirectory?.GetType();
 
         protected DirectoryTiffHandler(List<Directory> directories)
         {
             Directories = directories;
         }
 
-        public void EndingIfd()
+        public virtual void EndingIfd(in TiffReaderContext context)
         {
             CurrentDirectory = _directoryStack.Count == 0 ? null : _directoryStack.Pop();
         }
@@ -61,6 +37,8 @@ namespace MetadataExtractor.Formats.Tiff
             CurrentDirectory = directory;
             Directories.Add(CurrentDirectory);
         }
+
+#pragma warning disable format
 
         public void Warn(string message)  => GetCurrentOrErrorDirectory().AddError(message);
         public void Error(string message) => GetCurrentOrErrorDirectory().AddError(message);
@@ -97,15 +75,21 @@ namespace MetadataExtractor.Formats.Tiff
         public void SetInt32SArray(int tagId, int[] array)        => CurrentDirectory!.Set(tagId, array);
         public void SetInt32U(int tagId, uint int32U)             => CurrentDirectory!.Set(tagId, int32U);
         public void SetInt32UArray(int tagId, uint[] array)       => CurrentDirectory!.Set(tagId, array);
+        public void SetInt64S(int tagId, long int64S)             => CurrentDirectory!.Set(tagId, int64S);
+        public void SetInt64SArray(int tagId, long[] array)       => CurrentDirectory!.Set(tagId, array);
+        public void SetInt64U(int tagId, ulong int64U)            => CurrentDirectory!.Set(tagId, int64U);
+        public void SetInt64UArray(int tagId, ulong[] array)      => CurrentDirectory!.Set(tagId, array);
 
-        public abstract bool CustomProcessTag(int tagOffset, ICollection<int> processedIfdOffsets, IndexedReader reader, int tagId, int byteCount);
+#pragma warning restore format
 
-        public abstract bool TryCustomProcessFormat(int tagId, TiffDataFormatCode formatCode, uint componentCount, out long byteCount);
+        public abstract bool CustomProcessTag(in TiffReaderContext context, int tagId, int valueOffset, int byteCount);
+
+        public abstract bool TryCustomProcessFormat(int tagId, TiffDataFormatCode formatCode, ulong componentCount, out ulong byteCount);
 
         public abstract bool HasFollowerIfd();
 
         public abstract bool TryEnterSubIfd(int tagType);
 
-        public abstract void SetTiffMarker(int marker);
+        public abstract TiffStandard ProcessTiffMarker(ushort marker);
     }
 }

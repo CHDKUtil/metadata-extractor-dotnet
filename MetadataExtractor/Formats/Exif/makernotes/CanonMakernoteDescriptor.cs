@@ -1,31 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 using JetBrains.Annotations;
 namespace MetadataExtractor.Formats.Exif.Makernotes
@@ -126,7 +99,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 : null;
         }
 
-/*
+        /*
         @Nullable
         public String getLongExposureNoiseReductionDescription()
         {
@@ -303,7 +276,8 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 default:    return "Unknown (" + value + ")";
             }
         }
-*/
+        */
+
         public string? GetFlashBiasDescription()
         {
             if (!Directory.TryGetInt32(CanonMakernoteDirectory.FocalLength.TagFlashBias, out int value))
@@ -377,10 +351,12 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             if (!Directory.TryGetInt32(CanonMakernoteDirectory.CameraSettings.TagFlashDetails, out int value))
                 return null;
 
+#pragma warning disable format
             if (((value >> 14) & 1) > 0) return "External E-TTL";
             if (((value >> 13) & 1) > 0) return "Internal flash";
             if (((value >> 11) & 1) > 0) return "FP sync used";
             if (((value >>  4) & 1) > 0) return "FP sync enabled";
+#pragma warning restore format
 
             return "Unknown (" + value + ")";
         }
@@ -436,9 +412,9 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 return null;
 
             // Canon PowerShot S3 is special
-            const int canonMask = 0x4000;
-            if ((value & canonMask) != 0)
-                return (value & ~canonMask).ToString();
+            const int CanonMask = 0x4000;
+            if ((value & CanonMask) != 0)
+                return (value & ~CanonMask).ToString();
 
             return value switch
             {
@@ -554,7 +530,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             // TODO find an image that tests this calculation
             return value == 0
                 ? "Self timer not used"
-                : $"{value*0.1d} sec";
+                : $"{value * 0.1d} sec";
         }
 
         public string? GetMacroModeDescription()
@@ -564,7 +540,22 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         public string? GetQualityDescription()
         {
-            return GetIndexedDescription(CanonMakernoteDirectory.CameraSettings.TagQuality, 2, "Normal", "Fine", null, "Superfine");
+            if (!Directory.TryGetInt32(CanonMakernoteDirectory.CameraSettings.TagQuality, out int value))
+                return null;
+
+            return value switch
+            {
+                -1 => "n/a",
+                1 => "Economy",
+                2 => "Normal",
+                3 => "Fine",
+                4 => "RAW",
+                5 => "Superfine",
+                7 => "CRAW",
+                130 => "Normal Movie",
+                131 => "Movie (2)",
+                _ => $"Unknown ({value})"
+            };
         }
 
         public string? GetDigitalZoomDescription()
@@ -597,7 +588,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             if (!Directory.TryGetInt32(CanonMakernoteDirectory.CameraSettings.TagLensType, out int value))
                 return null;
 
-            return _lensTypeById.TryGetValue(value, out string lensType)
+            return _lensTypeById.TryGetValue(value, out string? lensType)
                 ? lensType
                 : $"Unknown ({value})";
         }
@@ -747,7 +738,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         /// Note that only Canon lenses are listed. Lenses from other manufacturers may identify themselves to the camera
         /// as being from this set, but in fact may be quite different. This limits the usefulness of this data, unfortunately.
         /// </remarks>
-        private readonly Dictionary<int, string> _lensTypeById = new Dictionary<int, string>
+        private readonly Dictionary<int, string> _lensTypeById = new()
         {
             { 1, "Canon EF 50mm f/1.8" },
             { 2, "Canon EF 28mm f/2.8" },

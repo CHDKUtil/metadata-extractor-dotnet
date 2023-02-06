@@ -1,29 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Collections.Generic;
-using MetadataExtractor.IO;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Tiff
 {
@@ -41,93 +16,153 @@ namespace MetadataExtractor.Formats.Tiff
         /// <exception cref="TiffProcessingException"/>
         public static void ProcessTiff(IndexedReader reader, ITiffHandler handler)
         {
+            // Standard TIFF
+            //
+            // TIFF Header:
+            //   - 2 bytes: byte order (MM or II)
+            //   - 2 bytes: version (always 42)
+            //   - 4 bytes: offset to first IFD
+
+            // Big TIFF
+            //
+            // TIFF Header:
+            //   - 2 bytes: byte order (MM or II)
+            //   - 2 bytes: version (always 43)
+            //   - 2 bytes: byte size of offsets (always 8)
+            //   - 2 bytes: reserved (always 0)
+            //   - 8 bytes: offset to first IFD
+
             // Read byte order.
             var byteOrder = reader.GetInt16(0);
+
             reader = byteOrder switch
             {
                 0x4d4d => reader.WithByteOrder(isMotorolaByteOrder: true),
                 0x4949 => reader.WithByteOrder(isMotorolaByteOrder: false),
-                _ => throw new TiffProcessingException("Unclear distinction between Motorola/Intel byte ordering: " + reader.GetInt16(0)),
+                _ => throw new TiffProcessingException("Unclear distinction between Motorola/Intel byte ordering: " + byteOrder),
             };
 
             // Check the next two values for correctness.
-            int tiffMarker = reader.GetUInt16(2);
-            handler.SetTiffMarker(tiffMarker);
+            var tiffMarker = reader.GetUInt16(2);
+            var tiffStandard = handler.ProcessTiffMarker(tiffMarker);
 
-            var firstIfdOffset = reader.GetInt32(4);
+            bool isBigTiff;
 
-            // David Ekholm sent a digital camera image that has this problem
-            // TODO calling Length should be avoided as it causes IndexedCapturingReader to read to the end of the stream
-            if (firstIfdOffset >= reader.Length - 1)
+            int firstIfdOffset;
+
+            switch (tiffStandard)
             {
-                handler.Warn("First IFD offset is beyond the end of the TIFF data segment -- trying default offset");
-                // First directory normally starts immediately after the offset bytes, so try that
-                firstIfdOffset = 2 + 2 + 4;
+                case TiffStandard.Tiff:
+                    isBigTiff = false;
+                    firstIfdOffset = checked((int)reader.GetUInt32(4));
+
+                    // David Ekholm sent a digital camera image that has this problem
+                    // TODO calling Length should be avoided as it causes IndexedCapturingReader to read to the end of the stream
+                    if (firstIfdOffset >= reader.Length - 1)
+                    {
+                        handler.Warn("First IFD offset is beyond the end of the TIFF data segment -- trying default offset");
+                        // First directory normally starts immediately after the offset bytes, so try that
+                        firstIfdOffset = 2 + 2 + 4;
+                    }
+
+                    break;
+
+                case TiffStandard.BigTiff:
+                    isBigTiff = true;
+                    var offsetByteSize = reader.GetInt16(4);
+
+                    if (offsetByteSize != 8)
+                    {
+                        handler.Error($"Unsupported offset byte size: {offsetByteSize}");
+                        return;
+                    }
+
+                    // There are two reserved bytes at offset 6, which are expected to have zero value.
+                    // We skip without validation for now, but may change this in future.
+
+                    firstIfdOffset = checked((int)reader.GetUInt64(8));
+                    break;
+
+                default:
+                    handler.Error($"Unsupported TiffStandard {tiffStandard}.");
+                    return;
             }
 
-            var processedIfdOffsets = new HashSet<int>();
+            var context = new TiffReaderContext(reader, reader.IsMotorolaByteOrder, isBigTiff);
 
-            ProcessIfd(handler, reader, processedIfdOffsets, firstIfdOffset);
+            ProcessIfd(handler, context, firstIfdOffset);
         }
 
-        /// <summary>Processes a TIFF IFD.</summary>
-        /// <remarks>
-        /// IFD Header:
-        /// <list type="bullet">
-        ///   <item><b>2 bytes</b> number of tags</item>
-        /// </list>
-        /// Tag structure:
-        /// <list type="bullet">
-        ///   <item><b>2 bytes</b> tag type</item>
-        ///   <item><b>2 bytes</b> format code (values 1 to 12, inclusive)</item>
-        ///   <item><b>4 bytes</b> component count</item>
-        ///   <item><b>4 bytes</b> inline value, or offset pointer if too large to fit in four bytes</item>
-        /// </list>
-        /// </remarks>
-        /// <param name="handler">the <see cref="ITiffHandler"/> that will coordinate processing and accept read values</param>
-        /// <param name="reader">the <see cref="IndexedReader"/> from which the data should be read</param>
-        /// <param name="processedGlobalIfdOffsets">the set of visited IFD offsets, to avoid revisiting the same IFD in an endless loop</param>
-        /// <param name="ifdOffset">the offset within <c>reader</c> at which the IFD data starts</param>
-        /// <exception cref="System.IO.IOException">an error occurred while accessing the required data</exception>
-        public static void ProcessIfd(ITiffHandler handler, IndexedReader reader, ICollection<int> processedGlobalIfdOffsets, int ifdOffset)
+        /// <summary>
+        /// Processes a TIFF IFD.
+        /// </summary>
+        /// <param name="handler">The <see cref="ITiffHandler"/> that will coordinate processing and accept read values.</param>
+        /// <param name="context">Context for the TIFF read operation.</param>
+        /// <param name="ifdOffset">The offset at which the IFD data starts.</param>
+        /// <exception cref="System.IO.IOException">An error occurred while accessing the required data.</exception>
+        public static void ProcessIfd(ITiffHandler handler, TiffReaderContext context, int ifdOffset)
         {
+            // Standard TIFF
+            //
+            // IFD Header:
+            //   - 2 bytes: number of tags
+            //
+            // Tag structure:
+            //   - 2 bytes: tag type
+            //   - 2 bytes: format code (values 1 to 12, inclusive)
+            //   - 4 bytes: component count
+            //   - 4 bytes: inline value, or offset pointer if too large to fit in four bytes
+
+            // BigTIFF
+            //
+            // IFD Header:
+            //   - 8 bytes: number of tags
+            //
+            // Tag structure:
+            //   - 2 bytes: tag type
+            //   - 2 bytes: format code (values 1 to 12, inclusive)
+            //   - 8 bytes: component count
+            //   - 8 bytes: inline value, or offset pointer if too large to fit in eight bytes
+
             try
             {
                 // Check for directories we've already visited to avoid stack overflows when recursive/cyclic directory structures exist.
-                // Note that we track these offsets in the global frame, not the reader's local frame.
-                var globalIfdOffset = reader.ToUnshiftedOffset(ifdOffset);
-                if (processedGlobalIfdOffsets.Contains(globalIfdOffset))
+                if (!context.TryVisitIfd(ifdOffset, handler.Kind))
                     return;
 
-                // Remember that we've visited this directory so that we don't visit it again later
-                processedGlobalIfdOffsets.Add(globalIfdOffset);
-
                 // Validate IFD offset
-                if (ifdOffset >= reader.Length || ifdOffset < 0)
+                if (ifdOffset >= context.Reader.Length || ifdOffset < 0)
                 {
                     handler.Error("Ignored IFD marked to start outside data segment");
                     return;
                 }
 
-                // First two bytes in the IFD are the number of tags in this directory
-                int dirTagCount = reader.GetUInt16(ifdOffset);
+                // The number of tags in this directory
+                var dirTagCount = context.IsBigTiff
+                    ? checked((int)context.Reader.GetUInt64(ifdOffset))
+                    : context.Reader.GetUInt16(ifdOffset);
 
                 // Some software modifies the byte order of the file, but misses some IFDs (such as makernotes).
                 // The entire test image repository doesn't contain a single IFD with more than 255 entries.
                 // Here we detect switched bytes that suggest this problem, and temporarily swap the byte order.
                 // This was discussed in GitHub issue #136.
-                if (dirTagCount > 0xFF && (dirTagCount & 0xFF) == 0)
+                if (!context.IsBigTiff && dirTagCount > 0xFF && (dirTagCount & 0xFF) == 0)
                 {
                     dirTagCount >>= 8;
-                    reader = reader.WithByteOrder(!reader.IsMotorolaByteOrder);
+                    context = context.WithByteOrder(!context.Reader.IsMotorolaByteOrder);
                 }
 
-                var dirLength = 2 + 12*dirTagCount + 4;
-                if (dirLength + ifdOffset > reader.Length)
+                var dirLength = context.IsBigTiff
+                    ? 8 + 20 * dirTagCount + 8
+                    : 2 + 12 * dirTagCount + 4;
+
+                if (dirLength + ifdOffset > checked((int)context.Reader.Length))
                 {
                     handler.Error("Illegally sized IFD");
                     return;
                 }
+
+                var inlineValueSize = context.IsBigTiff ? 8u : 4u;
 
                 //
                 // Handle each tag in this directory
@@ -135,27 +170,26 @@ namespace MetadataExtractor.Formats.Tiff
                 var invalidTiffFormatCodeCount = 0;
                 for (var tagNumber = 0; tagNumber < dirTagCount; tagNumber++)
                 {
-                    var tagOffset = CalculateTagOffset(ifdOffset, tagNumber);
+                    var tagOffset = CalculateTagOffset(ifdOffset, tagNumber, context.IsBigTiff);
 
-                    // 2 bytes for the tag id
-                    int tagId = reader.GetUInt16(tagOffset);
+                    int tagId = context.Reader.GetUInt16(tagOffset);
 
-                    // 2 bytes for the format code
-                    var formatCode = (TiffDataFormatCode)reader.GetUInt16(tagOffset + 2);
+                    var formatCode = (TiffDataFormatCode)context.Reader.GetUInt16(tagOffset + 2);
 
-                    // 4 bytes dictate the number of components in this tag's data
-                    var componentCount = reader.GetUInt32(tagOffset + 4);
+                    var componentCount = context.IsBigTiff
+                        ? context.Reader.GetUInt64(tagOffset + 4)
+                        : context.Reader.GetUInt32(tagOffset + 4);
 
-                    var format = TiffDataFormat.FromTiffFormatCode(formatCode);
+                    var format = TiffDataFormat.FromTiffFormatCode(formatCode, context.IsBigTiff);
 
-                    long byteCount;
-                    if (format == null)
+                    ulong byteCount;
+                    if (format is null)
                     {
                         if (!handler.TryCustomProcessFormat(tagId, formatCode, componentCount, out byteCount))
                         {
                             // This error suggests that we are processing at an incorrect index and will generate
                             // rubbish until we go out of bounds (which may be a while).  Exit now.
-                            handler.Error($"Invalid TIFF tag format code {formatCode} for tag 0x{tagId:X4}");
+                            handler.Error($"Invalid TIFF tag format code {(int)formatCode} for tag 0x{tagId:X4}");
                             // TODO specify threshold as a parameter, or provide some other external control over this behaviour
                             if (++invalidTiffFormatCodeCount > 5)
                             {
@@ -167,28 +201,33 @@ namespace MetadataExtractor.Formats.Tiff
                     }
                     else
                     {
-                        byteCount = componentCount * format.ComponentSizeBytes;
+                        byteCount = checked(componentCount * format.ComponentSizeBytes);
                     }
 
-                    long tagValueOffset;
-                    if (byteCount > 4)
+                    uint tagValueOffset;
+                    if (byteCount > inlineValueSize)
                     {
-                        // If it's bigger than 4 bytes, the dir entry contains an offset.
-                        tagValueOffset = reader.GetUInt32(tagOffset + 8);
-                        if (tagValueOffset + byteCount > reader.Length)
+                        // Value(s) are too big to fit inline. Follow the pointer.
+                        tagValueOffset = context.IsBigTiff
+                            ? checked((uint)context.Reader.GetUInt64(tagOffset + 12))
+                            : context.Reader.GetUInt32(tagOffset + 8);
+
+                        if (tagValueOffset + byteCount > checked((ulong)context.Reader.Length))
                         {
-                            // Bogus pointer offset and / or byteCount value
+                            // Bogus pointer offset and/or byteCount value
                             handler.Error("Illegal TIFF tag pointer offset");
                             continue;
                         }
                     }
                     else
                     {
-                        // 4 bytes or less and value is in the dir entry itself.
-                        tagValueOffset = tagOffset + 8;
+                        // Value(s) can fit inline.
+                        tagValueOffset = context.IsBigTiff
+                            ? checked((uint)tagOffset + 12)
+                            : checked((uint)tagOffset + 8);
                     }
 
-                    if (tagValueOffset < 0 || tagValueOffset > reader.Length)
+                    if (tagValueOffset > context.Reader.Length)
                     {
                         handler.Error("Illegal TIFF tag pointer offset");
                         continue;
@@ -196,7 +235,7 @@ namespace MetadataExtractor.Formats.Tiff
 
                     // Check that this tag isn't going to allocate outside the bounds of the data array.
                     // This addresses an uncommon OutOfMemoryError.
-                    if (byteCount < 0 || tagValueOffset + byteCount > reader.Length)
+                    if (tagValueOffset + byteCount > checked((ulong)context.Reader.Length))
                     {
                         handler.Error("Illegal number of bytes for TIFF tag data: " + byteCount);
                         continue;
@@ -204,33 +243,39 @@ namespace MetadataExtractor.Formats.Tiff
 
                     // Some tags point to one or more additional IFDs to process
                     var isIfdPointer = false;
-                    if (byteCount == checked(4L*componentCount))
+                    if (byteCount == checked(4L * componentCount) || formatCode == TiffDataFormatCode.Ifd8)
                     {
-                        for (var i = 0; i < componentCount; i++)
+                        for (ulong i = 0; i < componentCount; i++)
                         {
                             if (handler.TryEnterSubIfd(tagId))
                             {
                                 isIfdPointer = true;
-                                var subDirOffset = reader.GetUInt32((int)(tagValueOffset + i*4));
-                                ProcessIfd(handler, reader, processedGlobalIfdOffsets, (int)subDirOffset);
+                                var subDirOffset = context.Reader.GetUInt32(checked((int)(tagValueOffset + i * 4)));
+                                ProcessIfd(handler, context, (int)subDirOffset);
                             }
                         }
                     }
 
                     // If it wasn't an IFD pointer, allow custom tag processing to occur
-                    if (!isIfdPointer && !handler.CustomProcessTag((int)tagValueOffset, processedGlobalIfdOffsets, reader, tagId, (int)byteCount))
+                    if (!isIfdPointer && !handler.CustomProcessTag(context, tagId, (int)tagValueOffset, (int)byteCount))
                     {
                         // If no custom processing occurred, process the tag in the standard fashion
-                        ProcessTag(handler, tagId, (int)tagValueOffset, (int)componentCount, formatCode, reader);
+                        ProcessTag(handler, tagId, (int)tagValueOffset, (int)componentCount, formatCode, context.Reader);
                     }
                 }
 
                 // at the end of each IFD is an optional link to the next IFD
-                var finalTagOffset = CalculateTagOffset(ifdOffset, dirTagCount);
-                var nextIfdOffset = reader.GetInt32(finalTagOffset);
-                if (nextIfdOffset != 0)
+                var finalTagOffset = CalculateTagOffset(ifdOffset, dirTagCount, context.IsBigTiff);
+
+                var nextIfdOffsetLong = context.IsBigTiff
+                    ? context.Reader.GetUInt64(finalTagOffset)
+                    : context.Reader.GetUInt32(finalTagOffset);
+
+                if (nextIfdOffsetLong != 0 && nextIfdOffsetLong <= int.MaxValue)
                 {
-                    if (nextIfdOffset >= reader.Length)
+                    var nextIfdOffset = (int)nextIfdOffsetLong;
+
+                    if (nextIfdOffset >= context.Reader.Length)
                     {
                         // Last 4 bytes of IFD reference another IFD with an address that is out of bounds
                         return;
@@ -243,12 +288,14 @@ namespace MetadataExtractor.Formats.Tiff
                     }
 
                     if (handler.HasFollowerIfd())
-                        ProcessIfd(handler, reader, processedGlobalIfdOffsets, nextIfdOffset);
+                    {
+                        ProcessIfd(handler, context, nextIfdOffset);
+                    }
                 }
             }
             finally
             {
-                handler.EndingIfd();
+                handler.EndingIfd(in context);
             }
         }
 
@@ -278,7 +325,7 @@ namespace MetadataExtractor.Formats.Tiff
                     {
                         var array = new Rational[componentCount];
                         for (var i = 0; i < componentCount; i++)
-                            array[i] = new Rational(reader.GetInt32(tagValueOffset + 8*i), reader.GetInt32(tagValueOffset + 4 + 8*i));
+                            array[i] = new Rational(reader.GetInt32(tagValueOffset + 8 * i), reader.GetInt32(tagValueOffset + 4 + 8 * i));
                         handler.SetRationalArray(tagId, array);
                     }
                     break;
@@ -293,7 +340,7 @@ namespace MetadataExtractor.Formats.Tiff
                     {
                         var array = new Rational[componentCount];
                         for (var i = 0; i < componentCount; i++)
-                            array[i] = new Rational(reader.GetUInt32(tagValueOffset + 8*i), reader.GetUInt32(tagValueOffset + 4 + 8*i));
+                            array[i] = new Rational(reader.GetUInt32(tagValueOffset + 8 * i), reader.GetUInt32(tagValueOffset + 4 + 8 * i));
                         handler.SetRationalArray(tagId, array);
                     }
                     break;
@@ -308,7 +355,7 @@ namespace MetadataExtractor.Formats.Tiff
                     {
                         var array = new float[componentCount];
                         for (var i = 0; i < componentCount; i++)
-                            array[i] = reader.GetFloat32(tagValueOffset + i*4);
+                            array[i] = reader.GetFloat32(tagValueOffset + i * 4);
                         handler.SetFloatArray(tagId, array);
                     }
                     break;
@@ -323,7 +370,7 @@ namespace MetadataExtractor.Formats.Tiff
                     {
                         var array = new double[componentCount];
                         for (var i = 0; i < componentCount; i++)
-                            array[i] = reader.GetDouble64(tagValueOffset + i*4);
+                            array[i] = reader.GetDouble64(tagValueOffset + i * 8);
                         handler.SetDoubleArray(tagId, array);
                     }
                     break;
@@ -368,7 +415,7 @@ namespace MetadataExtractor.Formats.Tiff
                     {
                         var array = new short[componentCount];
                         for (var i = 0; i < componentCount; i++)
-                            array[i] = reader.GetInt16(tagValueOffset + i*2);
+                            array[i] = reader.GetInt16(tagValueOffset + i * 2);
                         handler.SetInt16SArray(tagId, array);
                     }
                     break;
@@ -383,7 +430,7 @@ namespace MetadataExtractor.Formats.Tiff
                     {
                         var array = new ushort[componentCount];
                         for (var i = 0; i < componentCount; i++)
-                            array[i] = reader.GetUInt16(tagValueOffset + i*2);
+                            array[i] = reader.GetUInt16(tagValueOffset + i * 2);
                         handler.SetInt16UArray(tagId, array);
                     }
                     break;
@@ -399,7 +446,7 @@ namespace MetadataExtractor.Formats.Tiff
                     {
                         var array = new int[componentCount];
                         for (var i = 0; i < componentCount; i++)
-                            array[i] = reader.GetInt32(tagValueOffset + i*4);
+                            array[i] = reader.GetInt32(tagValueOffset + i * 4);
                         handler.SetInt32SArray(tagId, array);
                     }
                     break;
@@ -415,14 +462,44 @@ namespace MetadataExtractor.Formats.Tiff
                     {
                         var array = new uint[componentCount];
                         for (var i = 0; i < componentCount; i++)
-                            array[i] = reader.GetUInt32(tagValueOffset + i*4);
+                            array[i] = reader.GetUInt32(tagValueOffset + i * 4);
                         handler.SetInt32UArray(tagId, array);
+                    }
+                    break;
+                }
+                case TiffDataFormatCode.Int64S:
+                {
+                    if (componentCount == 1)
+                    {
+                        handler.SetInt64S(tagId, reader.GetInt64(tagValueOffset));
+                    }
+                    else
+                    {
+                        var array = new long[componentCount];
+                        for (var i = 0; i < componentCount; i++)
+                            array[i] = reader.GetInt64(tagValueOffset + i * 8);
+                        handler.SetInt64SArray(tagId, array);
+                    }
+                    break;
+                }
+                case TiffDataFormatCode.Int64U:
+                {
+                    if (componentCount == 1)
+                    {
+                        handler.SetInt64U(tagId, reader.GetUInt64(tagValueOffset));
+                    }
+                    else
+                    {
+                        var array = new ulong[componentCount];
+                        for (var i = 0; i < componentCount; i++)
+                            array[i] = reader.GetUInt64(tagValueOffset + i * 8);
+                        handler.SetInt64UArray(tagId, array);
                     }
                     break;
                 }
                 default:
                 {
-                    handler.Error($"Invalid TIFF tag format code {formatCode} for tag 0x{tagId:X4}");
+                    handler.Error($"Invalid TIFF tag format code {(int)formatCode} for tag 0x{tagId:X4}");
                     break;
                 }
             }
@@ -431,10 +508,16 @@ namespace MetadataExtractor.Formats.Tiff
         /// <summary>Determine the offset of a given tag within the specified IFD.</summary>
         /// <remarks>
         /// Add 2 bytes for the tag count.
-        /// Each entry is 12 bytes.
+        /// Each entry is 12 bytes for regular TIFF, or 20 bytes for BigTIFF.
         /// </remarks>
-        /// <param name="ifdStartOffset">the offset at which the IFD starts</param>
-        /// <param name="entryNumber">the zero-based entry number</param>
-        private static int CalculateTagOffset(int ifdStartOffset, int entryNumber) => ifdStartOffset + 2 + 12*entryNumber;
+        /// <param name="ifdStartOffset">The offset at which the IFD starts.</param>
+        /// <param name="entryNumber">The zero-based entry number.</param>
+        /// <param name="isBigTiff">Whether we are using BigTIFF encoding.</param>
+        private static int CalculateTagOffset(int ifdStartOffset, int entryNumber, bool isBigTiff)
+        {
+            return !isBigTiff
+                ? ifdStartOffset + 2 + 12 * entryNumber
+                : ifdStartOffset + 8 + 20 * entryNumber;
+        }
     }
 }

@@ -1,29 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -41,7 +16,21 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         public const int TagDeviceType = 0x0002;
         public const int TagSamsungModelId = 0x0003;
 
+        public const int TagOrientationInfo = 0x0011;
+
+        public const int TagSmartAlbumColor = 0x0020;
+        public const int TagPictureWizard = 0x0021;
+
+        public const int TagLocalLocationName = 0x0030;
+
+        public const int TagPreviewIfd = 0x0035;
+
+        public const int TagRawDataByteOrder = 0x0040;
+        public const int TagWhiteBalanceSetup = 0x0041;
+
         public const int TagCameraTemperature = 0x0043;
+
+        public const int TagRawDataCfaPattern = 0x0050;
 
         public const int TagFaceDetect = 0x0100;
         public const int TagFaceRecognition = 0x0120;
@@ -49,31 +38,75 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         // following tags found only in SRW images
         public const int TagFirmwareName = 0xa001;
+        public const int TagSerialNumber = 0xa002;
+        public const int TagLensType = 0xa003;
+        public const int TagLensFirmware = 0xa004;
+        public const int TagInternalLensSerialNumber = 0xa005;
 
-        private static readonly Dictionary<int, string> _tagNameMap = new Dictionary<int, string>
+        public const int TagSensorAreas = 0xa010;
+        public const int TagColorSpace = 0xa011;
+        public const int TagSmartRange = 0xa012;
+        public const int TagExposureCompensation = 0xa013;
+        public const int TagIso = 0xa014;
+
+        public const int TagExposureTime = 0xa018;
+        public const int TagFNumber = 0xa019;
+
+        public const int TagFocalLengthIn35MMFormat = 0xa01a;
+
+        public const int TagEncryptionKey = 0xa020;
+
+        private static readonly Dictionary<int, string> _tagNameMap = new()
         {
             { TagMakerNoteVersion, "Maker Note Version" },
             { TagDeviceType, "Device Type" },
             { TagSamsungModelId, "Model Id" },
 
+            { TagOrientationInfo, "Orientation Info" },
+
+            { TagSmartAlbumColor, "Smart Album Color" },
+            { TagPictureWizard, "Picture Wizard" },
+
+            { TagLocalLocationName, "Local Location Name" },
+
+            { TagPreviewIfd, "Preview IFD" },
+
+            { TagRawDataByteOrder, "Raw Data Byte Order" },
+            { TagWhiteBalanceSetup, "White Balance Setup" },
+
             { TagCameraTemperature, "Camera Temperature" },
+
+            { TagRawDataCfaPattern, "Raw Data CFA Pattern" },
 
             { TagFaceDetect, "Face Detect" },
             { TagFaceRecognition, "Face Recognition" },
             { TagFaceName, "Face Name" },
-            { TagFirmwareName, "Firmware Name" }
+
+            { TagFirmwareName, "Firmware Name" },
+            { TagSerialNumber, "Serial Number" },
+            { TagLensType, "Lens Type" },
+            { TagLensFirmware, "Lens Firmware" },
+            { TagInternalLensSerialNumber, "Internal Lens Serial Number" },
+
+            { TagSensorAreas, "Sensor Areas" },
+            { TagColorSpace, "Color Space" },
+            { TagSmartRange, "Smart Range" },
+            { TagExposureCompensation, "Exposure Compensation" },
+            { TagIso, "ISO" },
+
+            { TagExposureTime, "Exposure Time" },
+            { TagFNumber, "F-Number" },
+
+            { TagFocalLengthIn35MMFormat, "Focal Length in 35mm Format" },
+
+            { TagEncryptionKey, "Encryption Key" }
         };
 
-        public SamsungType2MakernoteDirectory()
+        public SamsungType2MakernoteDirectory() : base(_tagNameMap)
         {
             SetDescriptor(new SamsungType2MakernoteDescriptor(this));
         }
 
         public override string Name => "Samsung Makernote";
-
-        protected override bool TryGetTagName(int tagType, out string tagName)
-        {
-            return _tagNameMap.TryGetValue(tagType, out tagName);
-        }
     }
 }

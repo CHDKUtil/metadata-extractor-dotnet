@@ -1,30 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using MetadataExtractor.IO;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -300,7 +274,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             public const int TagDecSwitchPosition = Offset + 51;
         }
 
-        private static readonly Dictionary<int, string> _tagNameMap = new Dictionary<int, string>
+        private static readonly Dictionary<int, string> _tagNameMap = new()
         {
             { TagMakernoteVersion, "Makernote Version" },
             { TagCameraSettings1, "Camera Settings" },
@@ -459,7 +433,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             { CameraSettings.TagDecSwitchPosition, "DEC Switch Position" }
         };
 
-        public OlympusMakernoteDirectory()
+        public OlympusMakernoteDirectory() : base(_tagNameMap)
         {
             SetDescriptor(new OlympusMakernoteDescriptor(this));
         }
@@ -489,11 +463,6 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             return this.TryGetInt64(CameraSettings.TagShootingMode, out long value) && value == 5;
         }
 
-        protected override bool TryGetTagName(int tagType, out string tagName)
-        {
-            return _tagNameMap.TryGetValue(tagType, out tagName);
-        }
-
         /// <summary>
         /// These values are currently decoded only for Olympus models.  Models with
         /// Olympus-style maker notes from other brands such as Acer, BenQ, Hitachi, HP,
@@ -505,7 +474,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         /// http://www.sno.phy.queensu.ca/~phil/exiftool/
         /// lib\Image\ExifTool\Olympus.pm
         /// </remarks>
-        public static readonly Dictionary<string, string> OlympusCameraTypes = new Dictionary<string, string>
+        public static readonly Dictionary<string, string> OlympusCameraTypes = new()
         {
             { "D4028", "X-2,C-50Z" },
             { "D4029", "E-20,E-20N,E-20P" },

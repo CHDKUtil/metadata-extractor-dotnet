@@ -1,32 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using MetadataExtractor.Util;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -174,7 +146,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             // ISO = (2^(value/8-1))*3.125
             if (!Directory.TryGetInt64(OlympusMakernoteDirectory.CameraSettings.TagApexFilmSpeedValue, out long value))
                 return null;
-            var iso = Math.Pow(value/8d - 1, 2)*3.125;
+            var iso = Math.Pow(value / 8d - 1, 2) * 3.125;
             return iso.ToString("0.##");
         }
 
@@ -197,7 +169,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             // Aperture F-stop = 2^( value/16-0.5 )
             if (!Directory.TryGetInt64(OlympusMakernoteDirectory.CameraSettings.TagApexApertureValue, out long value))
                 return null;
-            var fStop = Math.Pow(value/16d - 0.5, 2);
+            var fStop = Math.Pow(value / 16d - 0.5, 2);
             return GetFStopDescription(fStop);
         }
 
@@ -275,8 +247,6 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 return null;
 
             var day = (int)(value & 0xFF);
-//            var month = (int)Math.Floor((value - Math.Floor(value/65536.0)*65536.0)/256.0);
-//            var year = (int)Math.Floor(value/65536.0);
             var month = (int)(value >> 16) & 0xFF;
             var year = ((int)(value >> 8) & 0xFF) + 1970;
 
@@ -309,7 +279,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             // Aperture F-Stop = 2^(value/16-0.5)
             if (!Directory.TryGetInt64(OlympusMakernoteDirectory.CameraSettings.TagTime, out long value))
                 return null;
-            var fStop = Math.Pow(value/16d - 0.5, 2);
+            var fStop = Math.Pow(value / 16d - 0.5, 2);
             return GetFStopDescription(fStop);
         }
 
@@ -433,7 +403,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         public string? GetApexBrightnessDescription()
         {
             return Directory.TryGetInt64(OlympusMakernoteDirectory.CameraSettings.TagApexBrightnessValue, out long value)
-                ? (value/8d - 6).ToString()
+                ? (value / 8d - 6).ToString()
                 : null;
         }
 
@@ -502,7 +472,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         public string? GetColorMatrixDescription()
         {
-            if (!(Directory.GetObject(OlympusMakernoteDirectory.TagColourMatrix) is short[] values))
+            if (Directory.GetObject(OlympusMakernoteDirectory.TagColourMatrix) is not short[] values)
                 return null;
 
             return string.Join(" ", values.Select(b => b.ToString()).ToArray());
@@ -510,7 +480,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         public string? GetWbModeDescription()
         {
-            if (!(Directory.GetObject(OlympusMakernoteDirectory.TagWbMode) is short[] values))
+            if (Directory.GetObject(OlympusMakernoteDirectory.TagWbMode) is not short[] values)
                 return null;
 
             switch ($"{values[0]} {values[1]}".Trim())
@@ -545,7 +515,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         public string? GetRedBalanceDescription()
         {
-            if (!(Directory.GetObject(OlympusMakernoteDirectory.TagRedBalance) is ushort[] values) || values.Length < 2)
+            if (Directory.GetObject(OlympusMakernoteDirectory.TagRedBalance) is not ushort[] values || values.Length < 2)
                 return null;
 
             return (values[0] / 256.0d).ToString();
@@ -553,7 +523,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         public string? GetBlueBalanceDescription()
         {
-            if (!(Directory.GetObject(OlympusMakernoteDirectory.TagBlueBalance) is ushort[] values) || values.Length < 2)
+            if (Directory.GetObject(OlympusMakernoteDirectory.TagBlueBalance) is not ushort[] values || values.Length < 2)
                 return null;
 
             return (values[0] / 256.0d).ToString();
@@ -606,7 +576,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         public string? GetCameraTypeDescription()
         {
             var cameratype = Directory.GetString(OlympusMakernoteDirectory.TagCameraType);
-            if (cameratype == null)
+            if (cameratype is null)
                 return null;
 
             if (OlympusMakernoteDirectory.OlympusCameraTypes.TryGetValue(cameratype, out var mapped))
@@ -618,7 +588,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         public string? GetCameraIdDescription()
         {
             var bytes = Directory.GetByteArray(OlympusMakernoteDirectory.TagCameraId);
-            if (bytes == null)
+            if (bytes is null)
                 return null;
 
             return Encoding.UTF8.GetString(bytes, 0, bytes.Length);
@@ -706,7 +676,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         public string? GetSpecialModeDescription()
         {
-            if (!(Directory.GetObject(OlympusMakernoteDirectory.TagSpecialMode) is uint[] values))
+            if (Directory.GetObject(OlympusMakernoteDirectory.TagSpecialMode) is not uint[] values)
                 return null;
             if (values.Length < 1)
                 return string.Empty;

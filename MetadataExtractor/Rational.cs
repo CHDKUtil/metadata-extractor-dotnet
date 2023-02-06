@@ -1,28 +1,5 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
 #if !NETSTANDARD1_3
 using System.Globalization;
 using System.ComponentModel;
@@ -61,11 +38,11 @@ namespace MetadataExtractor
 
         /// <summary>Returns the value of the specified number as a <see cref="double"/>.</summary>
         /// <remarks>This may involve rounding.</remarks>
-        public double ToDouble() => Numerator == 0 ? 0.0 : Numerator/(double)Denominator;
+        public double ToDouble() => Numerator == 0 ? 0.0 : Numerator / (double)Denominator;
 
         /// <summary>Returns the value of the specified number as a <see cref="float"/>.</summary>
         /// <remarks>May incur rounding.</remarks>
-        public float ToSingle() => Numerator == 0 ? 0.0f : Numerator/(float)Denominator;
+        public float ToSingle() => Numerator == 0 ? 0.0f : Numerator / (float)Denominator;
 
         /// <summary>Returns the value of the specified number as a <see cref="byte"/>.</summary>
         /// <remarks>
@@ -134,44 +111,35 @@ namespace MetadataExtractor
 
         TypeCode IConvertible.GetTypeCode() => TypeCode.Object;
 
-        bool IConvertible.ToBoolean(IFormatProvider provider) => ToBoolean();
+        bool IConvertible.ToBoolean(IFormatProvider? provider) => ToBoolean();
 
-        char IConvertible.ToChar(IFormatProvider provider)
-        {
-            throw new NotSupportedException();
-        }
+        char IConvertible.ToChar(IFormatProvider? provider) => throw new NotSupportedException();
 
-        sbyte IConvertible.ToSByte(IFormatProvider provider) => ToSByte();
+        sbyte IConvertible.ToSByte(IFormatProvider? provider) => ToSByte();
 
-        byte IConvertible.ToByte(IFormatProvider provider) => ToByte();
+        byte IConvertible.ToByte(IFormatProvider? provider) => ToByte();
 
-        short IConvertible.ToInt16(IFormatProvider provider) => ToInt16();
+        short IConvertible.ToInt16(IFormatProvider? provider) => ToInt16();
 
-        ushort IConvertible.ToUInt16(IFormatProvider provider) => ToUInt16();
+        ushort IConvertible.ToUInt16(IFormatProvider? provider) => ToUInt16();
 
-        int IConvertible.ToInt32(IFormatProvider provider) => ToInt32();
+        int IConvertible.ToInt32(IFormatProvider? provider) => ToInt32();
 
-        uint IConvertible.ToUInt32(IFormatProvider provider) => ToUInt32();
+        uint IConvertible.ToUInt32(IFormatProvider? provider) => ToUInt32();
 
-        long IConvertible.ToInt64(IFormatProvider provider) => ToInt64();
+        long IConvertible.ToInt64(IFormatProvider? provider) => ToInt64();
 
-        ulong IConvertible.ToUInt64(IFormatProvider provider) => ToUInt64();
+        ulong IConvertible.ToUInt64(IFormatProvider? provider) => ToUInt64();
 
-        float IConvertible.ToSingle(IFormatProvider provider) => ToSingle();
+        float IConvertible.ToSingle(IFormatProvider? provider) => ToSingle();
 
-        double IConvertible.ToDouble(IFormatProvider provider) => ToDouble();
+        double IConvertible.ToDouble(IFormatProvider? provider) => ToDouble();
 
-        decimal IConvertible.ToDecimal(IFormatProvider provider) => ToDecimal();
+        decimal IConvertible.ToDecimal(IFormatProvider? provider) => ToDecimal();
 
-        DateTime IConvertible.ToDateTime(IFormatProvider provider)
-        {
-            throw new NotSupportedException();
-        }
+        DateTime IConvertible.ToDateTime(IFormatProvider? provider) => throw new NotSupportedException();
 
-        object IConvertible.ToType(Type conversionType, IFormatProvider provider)
-        {
-            throw new NotSupportedException();
-        }
+        object IConvertible.ToType(Type conversionType, IFormatProvider? provider) => throw new NotSupportedException();
 
         #endregion
 
@@ -179,17 +147,28 @@ namespace MetadataExtractor
 
         /// <summary>Gets the reciprocal value of this object as a new <see cref="Rational"/>.</summary>
         /// <value>the reciprocal in a new object</value>
-        public Rational Reciprocal => new Rational(Denominator, Numerator);
+        public Rational Reciprocal => new(Denominator, Numerator);
+
+        /// <summary>
+        /// Gets the absolute value of this object as a new <see cref="Rational"/>.
+        /// </summary>
+        public Rational Absolute => new(Math.Abs(Numerator), Math.Abs(Denominator));
 
         /// <summary>
         /// Checks if this <see cref="Rational"/> number is expressible as an integer, either positive or negative.
         /// </summary>
-        public bool IsInteger => Denominator == 1 || (Denominator != 0 && Numerator%Denominator == 0) || (Denominator == 0 && Numerator == 0);
+        public bool IsInteger => Denominator == 1 || (Denominator != 0 && Numerator % Denominator == 0) || (Denominator == 0 && Numerator == 0);
 
         /// <summary>
         /// True if either <see cref="Denominator"/> or <see cref="Numerator"/> are zero.
         /// </summary>
         public bool IsZero => Denominator == 0 || Numerator == 0;
+
+        /// <summary>
+        /// True if <see cref="IsZero"/> is false and <see cref="Numerator"/> and <see cref="Denominator"/> are
+        /// either both positive or both negative.
+        /// </summary>
+        public bool IsPositive => !IsZero && (Numerator > 0 == Denominator > 0);
 
         #region Formatting
 
@@ -208,16 +187,10 @@ namespace MetadataExtractor
                 return ToString(provider);
 
             if (IsInteger)
-                return ToInt32().ToString(provider);
-
-            if (Numerator != 1 && Denominator%Numerator == 0)
-            {
-                // common factor between denominator and numerator
-                var newDenominator = Denominator/Numerator;
-                return new Rational(1, newDenominator).ToSimpleString(allowDecimal, provider);
-            }
+                return ToInt64().ToString(provider);
 
             var simplifiedInstance = GetSimplifiedInstance();
+
             if (allowDecimal)
             {
                 var doubleString = simplifiedInstance.ToDouble().ToString(provider);
@@ -252,20 +225,20 @@ namespace MetadataExtractor
         /// <remarks>
         /// For example, <c>1/2</c> is not equal to <c>10/20</c> by this method.
         /// Similarly, <c>1/0</c> is not equal to <c>100/0</c> by this method.
-        /// To test numerically equivalence, use <see cref="Equals(MetadataExtractor.Rational)"/>.
+        /// To test numerically equivalence, use <see cref="Equals(Rational)"/>.
         /// </remarks>
         /// <param name="other"></param>
         /// <returns></returns>
         public bool EqualsExact(Rational other) => Denominator == other.Denominator && Numerator == other.Numerator;
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is null)
                 return false;
             return obj is Rational rational && Equals(rational);
         }
 
-        public override int GetHashCode() => unchecked(Denominator.GetHashCode()*397) ^ Numerator.GetHashCode();
+        public override int GetHashCode() => unchecked(Denominator.GetHashCode() * 397) ^ Numerator.GetHashCode();
 
         #endregion
 
@@ -301,19 +274,28 @@ namespace MetadataExtractor
                 return a == 0 ? b : a;
             }
 
-            var gcd = GCD(Numerator, Denominator);
+            var n = Numerator;
+            var d = Denominator;
 
-            return new Rational(Numerator / gcd, Denominator / gcd);
+            if (d < 0)
+            {
+                n = -n;
+                d = -d;
+            }
+
+            var gcd = GCD(n, d);
+
+            return new Rational(n / gcd, d / gcd);
         }
 
         #region Equality operators
 
-        public static bool operator==(Rational a, Rational b)
+        public static bool operator ==(Rational a, Rational b)
         {
             return Equals(a, b);
         }
 
-        public static bool operator!=(Rational a, Rational b)
+        public static bool operator !=(Rational a, Rational b)
         {
             return !Equals(a, b);
         }
@@ -338,7 +320,7 @@ namespace MetadataExtractor
 
             public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
             {
-                if (value == null)
+                if (value is null)
                     return base.ConvertFrom(context, culture, null);
 
                 var type = value.GetType();

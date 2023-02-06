@@ -1,49 +1,45 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Exif.Makernotes;
 using MetadataExtractor.Formats.Tiff;
-using MetadataExtractor.IO;
-using MetadataExtractor.Util;
+using MetadataExtractor.Formats.Xmp;
 #if NET35
 using DirectoryList = System.Collections.Generic.IList<MetadataExtractor.Directory>;
 #else
 using DirectoryList = System.Collections.Generic.IReadOnlyList<MetadataExtractor.Directory>;
 #endif
 
+#pragma warning disable CS8602 // Dereference of a possibly null reference
+#pragma warning disable CS8604 // Dereference of a possibly null reference
+
 namespace MetadataExtractor.Formats.QuickTime
 {
     public static class QuickTimeMetadataReader
     {
-        private static readonly DateTime _epoch = new DateTime(1904, 1, 1);
+        private static readonly DateTime _epoch = new(1904, 1, 1);
+        private static readonly int[] _supportedAtomValueTypes = { 1, 13, 14, 23, 27 };
 
         public static DirectoryList ReadMetadata(Stream stream)
         {
             var directories = new List<Directory>();
+            var metaDataKeys = new List<string>();
+            QuickTimeMetadataHeaderDirectory? metaHeaderDirectory = null;
+
+            QuickTimeReader.ProcessAtoms(stream, Handler);
+
+            return directories;
+
+            QuickTimeMetadataHeaderDirectory GetMetaHeaderDirectory()
+            {
+                if (metaHeaderDirectory is null)
+                {
+                    metaHeaderDirectory = new QuickTimeMetadataHeaderDirectory();
+                    directories.Add(metaHeaderDirectory);
+                }
+
+                return metaHeaderDirectory;
+            }
 
             void TrakHandler(AtomCallbackArgs a)
             {
@@ -54,8 +50,8 @@ namespace MetadataExtractor.Formats.QuickTime
                         var directory = new QuickTimeTrackHeaderDirectory();
                         directory.Set(QuickTimeTrackHeaderDirectory.TagVersion, a.Reader.GetByte());
                         directory.Set(QuickTimeTrackHeaderDirectory.TagFlags, a.Reader.GetBytes(3));
-                        directory.Set(QuickTimeTrackHeaderDirectory.TagCreated, _epoch.AddTicks(TimeSpan.TicksPerSecond*a.Reader.GetUInt32()));
-                        directory.Set(QuickTimeTrackHeaderDirectory.TagModified, _epoch.AddTicks(TimeSpan.TicksPerSecond*a.Reader.GetUInt32()));
+                        directory.Set(QuickTimeTrackHeaderDirectory.TagCreated, _epoch.AddTicks(TimeSpan.TicksPerSecond * a.Reader.GetUInt32()));
+                        directory.Set(QuickTimeTrackHeaderDirectory.TagModified, _epoch.AddTicks(TimeSpan.TicksPerSecond * a.Reader.GetUInt32()));
                         directory.Set(QuickTimeTrackHeaderDirectory.TagTrackId, a.Reader.GetUInt32());
                         a.Reader.Skip(4L);
                         directory.Set(QuickTimeTrackHeaderDirectory.TagDuration, a.Reader.GetUInt32());
@@ -78,18 +74,19 @@ namespace MetadataExtractor.Formats.QuickTime
             {
                 var width = directory.GetInt32(QuickTimeTrackHeaderDirectory.TagWidth);
                 var height = directory.GetInt32(QuickTimeTrackHeaderDirectory.TagHeight);
-                if (width == 0 || height == 0 || directory.GetObject(QuickTimeTrackHeaderDirectory.TagRotation) != null) return;
+                if (width == 0 || height == 0 || directory.GetObject(QuickTimeTrackHeaderDirectory.TagRotation) != null)
+                    return;
 
-                if (directory.GetObject(QuickTimeTrackHeaderDirectory.TagMatrix) is float[] matrix && matrix.Length > 5)
+                if (directory.GetObject(QuickTimeTrackHeaderDirectory.TagMatrix) is float[] { Length: > 5 } matrix)
                 {
                     var x = matrix[1] + matrix[4];
                     var y = matrix[0] + matrix[3];
-                    var theta = Math.Atan2(x, y);
-                    var degree = ((180 / Math.PI) * theta) - 45;
-                    if (degree < 0)
-                        degree += 360;
+                    var theta = Math.Atan2(y, x);
+                    var degree = RadiansToDegrees(theta) - 45;
 
                     directory.Set(QuickTimeTrackHeaderDirectory.TagRotation, degree);
+
+                    static double RadiansToDegrees(double radians) => (180 / Math.PI) * radians;
                 }
             }
 
@@ -128,6 +125,118 @@ namespace MetadataExtractor.Formats.QuickTime
                 }
             }
 
+            void UserDataHandler(AtomCallbackArgs a)
+            {
+                switch (a.TypeString)
+                {
+                    case "?xyz":
+                        var stringSize = a.Reader.GetUInt16();
+                        a.Reader.Skip(2); // uint16 language code
+                        var stringBytes = a.Reader.GetBytes(stringSize);
+
+                        // TODO parse ISO 6709 string into GeoLocation? GeoLocation does not (currently) support altitude, where ISO 6709 does
+                        GetMetaHeaderDirectory().Set(
+                            QuickTimeMetadataHeaderDirectory.TagGpsLocation,
+                            new StringValue(stringBytes, Encoding.UTF8));
+                        break;
+                }
+            }
+
+            void MetaDataHandler(AtomCallbackArgs a)
+            {
+                // see https://developer.apple.com/library/archive/documentation/QuickTime/QTFF/Metadata/Metadata.html
+                switch (a.TypeString)
+                {
+                    case "keys":
+                    {
+                        a.Reader.Skip(4); // 1 byte version, 3 bytes flags
+                        var entryCount = a.Reader.GetUInt32();
+                        for (int i = 1; i <= entryCount; i++)
+                        {
+                            var keySize = a.Reader.GetUInt32();
+                            var keyValueSize = (int)keySize - 8;
+                            a.Reader.Skip(4); // uint32: key namespace
+                            var keyValue = a.Reader.GetBytes(keyValueSize);
+                            metaDataKeys.Add(Encoding.UTF8.GetString(keyValue));
+                        }
+                        break;
+                    }
+                    case "ilst":
+                    {
+                        // Iterate over the list of Metadata Item Atoms.
+                        for (int i = 0; i < metaDataKeys.Count; i++)
+                        {
+                            long atomSize = a.Reader.GetUInt32();
+                            if (atomSize < 24)
+                            {
+                                GetMetaHeaderDirectory().AddError("Invalid ilst atom type");
+                                a.Reader.Skip(atomSize - 4);
+                                continue;
+                            }
+                            var atomType = a.Reader.GetUInt32();
+
+                            // Indexes into the metadata item keys atom are 1-based (1…entry_count).
+                            // atom type for each metadata item atom is the index of the key
+                            if (atomType < 1 || atomType > metaDataKeys.Count)
+                            {
+                                GetMetaHeaderDirectory().AddError("Invalid ilst atom type");
+                                a.Reader.Skip(atomSize - 8);
+                                continue;
+                            }
+                            var key = metaDataKeys[(int)atomType - 1];
+
+                            // Value Atom
+                            a.Reader.Skip(8); // uint32 type indicator, uint32 locale indicator
+
+                            // Data Atom
+                            var dataTypeIndicator = a.Reader.GetUInt32();
+                            if (!_supportedAtomValueTypes.Contains((int)dataTypeIndicator))
+                            {
+                                GetMetaHeaderDirectory().AddError($"Unsupported type indicator \"{dataTypeIndicator}\" for key \"{key}\"");
+                                a.Reader.Skip(atomSize - 20);
+                                continue;
+                            }
+
+                            // locale not supported yet.
+                            a.Reader.Skip(4);
+
+                            var data = a.Reader.GetBytes((int)atomSize - 24);
+                            if (QuickTimeMetadataHeaderDirectory.TryGetTag(key, out int tag))
+                            {
+                                object value = dataTypeIndicator switch
+                                {
+                                    // UTF-8
+                                    1 => new StringValue(data, Encoding.UTF8),
+
+                                    // BE Float32 (used for User Rating)
+                                    23 => BitConverter.ToSingle(BitConverter.IsLittleEndian ? data.Reverse().ToArray() : data, 0),
+
+                                    // 13 JPEG
+                                    // 14 PNG
+                                    // 27 BMP
+                                    _ => data
+                                };
+
+                                value = tag switch
+                                {
+                                    QuickTimeMetadataHeaderDirectory.TagCreationDate => DateTime.Parse(((StringValue)value).ToString()),
+                                    QuickTimeMetadataHeaderDirectory.TagLocationDate => DateTime.Parse(((StringValue)value).ToString()),
+                                    _ => value,
+                                };
+
+                                GetMetaHeaderDirectory().Set(tag, value);
+                            }
+                            else
+                            {
+                                GetMetaHeaderDirectory().AddError($"Unsupported ilst key \"{key}\"");
+                            }
+                        }
+
+                        break;
+                    }
+                }
+            }
+
             void MoovHandler(AtomCallbackArgs a)
             {
                 switch (a.TypeString)
@@ -137,11 +246,11 @@ namespace MetadataExtractor.Formats.QuickTime
                         var directory = new QuickTimeMovieHeaderDirectory();
                         directory.Set(QuickTimeMovieHeaderDirectory.TagVersion, a.Reader.GetByte());
                         directory.Set(QuickTimeMovieHeaderDirectory.TagFlags, a.Reader.GetBytes(3));
-                        directory.Set(QuickTimeMovieHeaderDirectory.TagCreated, _epoch.AddTicks(TimeSpan.TicksPerSecond*a.Reader.GetUInt32()));
-                        directory.Set(QuickTimeMovieHeaderDirectory.TagModified, _epoch.AddTicks(TimeSpan.TicksPerSecond*a.Reader.GetUInt32()));
+                        directory.Set(QuickTimeMovieHeaderDirectory.TagCreated, _epoch.AddTicks(TimeSpan.TicksPerSecond * a.Reader.GetUInt32()));
+                        directory.Set(QuickTimeMovieHeaderDirectory.TagModified, _epoch.AddTicks(TimeSpan.TicksPerSecond * a.Reader.GetUInt32()));
                         var timeScale = a.Reader.GetUInt32();
                         directory.Set(QuickTimeMovieHeaderDirectory.TagTimeScale, timeScale);
-                        directory.Set(QuickTimeMovieHeaderDirectory.TagDuration, TimeSpan.FromSeconds(a.Reader.GetUInt32()/(double) timeScale));
+                        directory.Set(QuickTimeMovieHeaderDirectory.TagDuration, TimeSpan.FromSeconds((double)a.Reader.GetUInt32() / (timeScale == 0 ? 1 : timeScale)));
                         directory.Set(QuickTimeMovieHeaderDirectory.TagPreferredRate, a.Reader.Get32BitFixedPoint());
                         directory.Set(QuickTimeMovieHeaderDirectory.TagPreferredVolume, a.Reader.Get16BitFixedPoint());
                         a.Reader.Skip(10);
@@ -158,9 +267,9 @@ namespace MetadataExtractor.Formats.QuickTime
                     }
                     case "uuid":
                     {
-                        var CR3 = new byte[] { 0x85, 0xc0, 0xb6, 0x87, 0x82, 0x0f, 0x11, 0xe0, 0x81, 0x11, 0xf4, 0xce, 0x46, 0x2b, 0x6a, 0x48 };
-                        var uuid = a.Reader.GetBytes(CR3.Length);
-                        if (CR3.RegionEquals(0, CR3.Length, uuid))
+                        var cr3 = new byte[] { 0x85, 0xc0, 0xb6, 0x87, 0x82, 0x0f, 0x11, 0xe0, 0x81, 0x11, 0xf4, 0xce, 0x46, 0x2b, 0x6a, 0x48 };
+                        var uuid = a.Reader.GetBytes(cr3.Length);
+                        if (cr3.RegionEquals(0, cr3.Length, uuid))
                         {
                             QuickTimeReader.ProcessAtoms(stream, UuidHandler, a.BytesLeft);
                         }
@@ -171,20 +280,32 @@ namespace MetadataExtractor.Formats.QuickTime
                         QuickTimeReader.ProcessAtoms(stream, TrakHandler, a.BytesLeft);
                         break;
                     }
-//                    case "clip":
-//                    {
-//                        QuickTimeReader.ProcessAtoms(stream, clipHandler, a.BytesLeft);
-//                        break;
-//                    }
-//                    case "prfl":
-//                    {
-//                        a.Reader.Skip(4L);
-//                        var partId = a.Reader.GetUInt32();
-//                        var featureCode = a.Reader.GetUInt32();
-//                        var featureValue = string.Join(" ", a.Reader.GetBytes(4).Select(v => v.ToString("X2")).ToArray());
-//                        Debug.WriteLine($"PartId={partId} FeatureCode={featureCode} FeatureValue={featureValue}");
-//                        break;
-//                    }
+                    case "meta":
+                    {
+                        QuickTimeReader.ProcessAtoms(stream, MetaDataHandler, a.BytesLeft);
+                        break;
+                    }
+                    case "udta":
+                    {
+                        QuickTimeReader.ProcessAtoms(stream, UserDataHandler, a.BytesLeft);
+                        break;
+                    }
+                    /*
+                    case "clip":
+                    {
+                        QuickTimeReader.ProcessAtoms(stream, clipHandler, a.BytesLeft);
+                        break;
+                    }
+                    case "prfl":
+                    {
+                        a.Reader.Skip(4L);
+                        var partId = a.Reader.GetUInt32();
+                        var featureCode = a.Reader.GetUInt32();
+                        var featureValue = string.Join(" ", a.Reader.GetBytes(4).Select(v => v.ToString("X2")).ToArray());
+                        Debug.WriteLine($"PartId={partId} FeatureCode={featureCode} FeatureValue={featureValue}");
+                        break;
+                    }
+                    */
                 }
             }
 
@@ -197,6 +318,21 @@ namespace MetadataExtractor.Formats.QuickTime
                         QuickTimeReader.ProcessAtoms(stream, MoovHandler, a.BytesLeft);
                         break;
                     }
+                    case "uuid":
+                    {
+                        var xmp = new byte[] { 0xbe, 0x7a, 0xcf, 0xcb, 0x97, 0xa9, 0x42, 0xe8, 0x9c, 0x71, 0x99, 0x94, 0x91, 0xe3, 0xaf, 0xac };
+                        if (a.BytesLeft >= xmp.Length)
+                        {
+                            var uuid = a.Reader.GetBytes(xmp.Length);
+                            if (xmp.RegionEquals(0, xmp.Length, uuid))
+                            {
+                                var xmpBytes = a.Reader.GetNullTerminatedBytes((int)a.BytesLeft);
+                                var xmpDirectory = new XmpReader().Extract(xmpBytes);
+                                directories.Add(xmpDirectory);
+                            }
+                        }
+                        break;
+                    }
                     case "ftyp":
                     {
                         var directory = new QuickTimeFileTypeDirectory();
@@ -204,17 +340,15 @@ namespace MetadataExtractor.Formats.QuickTime
                         directory.Set(QuickTimeFileTypeDirectory.TagMinorVersion, a.Reader.GetUInt32());
                         var compatibleBrands = new List<string>();
                         while (a.BytesLeft >= 4)
+                        {
                             compatibleBrands.Add(a.Reader.Get4ccString());
-                        directory.Set(QuickTimeFileTypeDirectory.TagCompatibleBrands, compatibleBrands);
+                        }
+                        directory.Set(QuickTimeFileTypeDirectory.TagCompatibleBrands, compatibleBrands.ToArray());
                         directories.Add(directory);
                         break;
                     }
                 }
             }
-
-            QuickTimeReader.ProcessAtoms(stream, Handler);
-
-            return directories;
         }
     }
 }

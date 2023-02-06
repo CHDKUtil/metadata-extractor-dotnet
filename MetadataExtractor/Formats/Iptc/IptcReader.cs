@@ -1,40 +1,6 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using MetadataExtractor.Formats.Jpeg;
-using MetadataExtractor.IO;
-
-#if NET35
-using DirectoryList = System.Collections.Generic.IList<MetadataExtractor.Directory>;
-#else
-using DirectoryList = System.Collections.Generic.IReadOnlyList<MetadataExtractor.Directory>;
-#endif
 
 namespace MetadataExtractor.Formats.Iptc
 {
@@ -49,7 +15,7 @@ namespace MetadataExtractor.Formats.Iptc
     {
         // TODO consider storing each IPTC record in a separate directory
 
-/*
+        /*
         public static final int DIRECTORY_IPTC = 2;
 
         public static final int ENVELOPE_RECORD = 1;
@@ -61,22 +27,18 @@ namespace MetadataExtractor.Formats.Iptc
         public static final int PRE_DATA_RECORD = 7;
         public static final int DATA_RECORD = 8;
         public static final int POST_DATA_RECORD = 9;
-*/
+        */
 
-        private const byte IptcMarkerByte = 0x1c;
+        internal const byte IptcMarkerByte = 0x1c;
 
-        ICollection<JpegSegmentType> IJpegSegmentMetadataReader.SegmentTypes => new [] { JpegSegmentType.AppD };
+        ICollection<JpegSegmentType> IJpegSegmentMetadataReader.SegmentTypes { get; } = new[] { JpegSegmentType.AppD };
 
-        public DirectoryList ReadJpegSegments(IEnumerable<JpegSegment> segments)
+        public IEnumerable<Directory> ReadJpegSegments(IEnumerable<JpegSegment> segments)
         {
             // Ensure data starts with the IPTC marker byte
             return segments
                 .Where(segment => segment.Bytes.Length != 0 && segment.Bytes[0] == IptcMarkerByte)
-                .Select(segment => Extract(new SequentialByteArrayReader(segment.Bytes), segment.Bytes.Length))
-#if NET35
-                .Cast<Directory>()
-#endif
-                .ToList();
+                .Select(segment => (Directory)Extract(new SequentialByteArrayReader(segment.Bytes), segment.Bytes.Length));
         }
 
         /// <summary>Reads IPTC values and returns them in an <see cref="IptcDirectory"/>.</summary>
@@ -129,7 +91,8 @@ namespace MetadataExtractor.Formats.Iptc
                     directoryType = reader.GetByte();
                     tagType = reader.GetByte();
                     tagByteCount = reader.GetUInt16();
-                    if (tagByteCount > 0x7FFF) {
+                    if (tagByteCount > 0x7FFF)
+                    {
                         // Extended DataSet Tag (see 1.5(c), p14, IPTC-IIMV4.2.pdf)
                         tagByteCount = ((tagByteCount & 0x7FFF) << 16) | reader.GetUInt16();
                         offset += 2;
@@ -184,7 +147,7 @@ namespace MetadataExtractor.Formats.Iptc
                 {
                     var bytes = reader.GetBytes(tagByteCount);
                     var charset = Iso2022Converter.ConvertEscapeSequenceToEncodingName(bytes);
-                    if (charset == null)
+                    if (charset is null)
                     {
                         // Unable to determine the charset, so fall through and treat tag as a regular string
                         charset = Encoding.UTF8.GetString(bytes, 0, bytes.Length);
@@ -249,7 +212,7 @@ namespace MetadataExtractor.Formats.Iptc
                 var oldStrings = directory.GetStringValueArray(tagIdentifier);
 
                 StringValue[] newStrings;
-                if (oldStrings == null)
+                if (oldStrings is null)
                 {
                     // TODO hitting this block means any prior value(s) are discarded
                     newStrings = new StringValue[1];

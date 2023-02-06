@@ -1,32 +1,11 @@
-﻿#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+﻿// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using MetadataExtractor.IO;
+
+#if NET35
+using JpegSegmentList = System.Collections.Generic.IList<MetadataExtractor.Formats.Jpeg.JpegSegment>;
+#else
+using JpegSegmentList = System.Collections.Generic.IReadOnlyList<MetadataExtractor.Formats.Jpeg.JpegSegment>;
+#endif
 
 namespace MetadataExtractor.Formats.Jpeg
 {
@@ -38,7 +17,7 @@ namespace MetadataExtractor.Formats.Jpeg
     /// Segments are returned in the order they appear in the file, however that order may vary from file to file.
     /// <para />
     /// Use <see cref="ReadSegments(SequentialReader,ICollection{JpegSegmentType})"/> to specific segment types,
-    /// or pass <c>null</c> to read all segments.
+    /// or pass <see langword="null" /> to read all segments.
     /// <para />
     /// Note that SOS (start of scan) or EOI (end of image) segments are not returned by this class's methods.
     /// </remarks>
@@ -53,10 +32,10 @@ namespace MetadataExtractor.Formats.Jpeg
         /// Will not return SOS (start of scan) or EOI (end of image) segments.
         /// </remarks>
         /// <param name="filePath">a file from which the JPEG data will be read.</param>
-        /// <param name="segmentTypes">the set of JPEG segments types that are to be returned. If this argument is <c>null</c> then all found segment types are returned.</param>
+        /// <param name="segmentTypes">the set of JPEG segments types that are to be returned. If this argument is <see langword="null" /> then all found segment types are returned.</param>
         /// <exception cref="JpegProcessingException"/>
         /// <exception cref="IOException"/>
-        public static IEnumerable<JpegSegment> ReadSegments(string filePath, ICollection<JpegSegmentType>? segmentTypes = null)
+        public static JpegSegmentList ReadSegments(string filePath, ICollection<JpegSegmentType>? segmentTypes = null)
         {
             using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             return ReadSegments(new SequentialStreamReader(stream), segmentTypes).ToList();
@@ -69,7 +48,7 @@ namespace MetadataExtractor.Formats.Jpeg
         /// Will not return SOS (start of scan) or EOI (end of image) segments.
         /// </remarks>
         /// <param name="reader">a <see cref="SequentialReader"/> from which the JPEG data will be read. It must be positioned at the beginning of the JPEG data stream.</param>
-        /// <param name="segmentTypes">the set of JPEG segments types that are to be returned. If this argument is <c>null</c> then all found segment types are returned.</param>
+        /// <param name="segmentTypes">the set of JPEG segments types that are to be returned. If this argument is <see langword="null" /> then all found segment types are returned.</param>
         /// <exception cref="JpegProcessingException"/>
         /// <exception cref="IOException"/>
         public static IEnumerable<JpegSegment> ReadSegments(SequentialReader reader, ICollection<JpegSegmentType>? segmentTypes = null)
@@ -124,7 +103,7 @@ namespace MetadataExtractor.Formats.Jpeg
                     throw new JpegProcessingException("JPEG segment size would be less than zero");
 
                 // Check whether we are interested in this segment
-                if (segmentTypes == null || segmentTypes.Contains(segmentType))
+                if (segmentTypes is null || segmentTypes.Contains(segmentType))
                 {
                     var segmentOffset = reader.Position;
                     var segmentBytes = reader.GetBytes(segmentLength);

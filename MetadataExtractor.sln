@@ -1,19 +1,24 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.28917.182
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32403.7
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8CF154EA-6A2C-4BF4-B263-78758F834192}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
+		.gitmodules = .gitmodules
 		appveyor.yml = appveyor.yml
+		azure-pipelines.yml = azure-pipelines.yml
 		Build.ps1 = Build.ps1
 		CONTRIBUTING.md = CONTRIBUTING.md
 		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
 		LICENSE = LICENSE
+		MetadataExtractor.snk = MetadataExtractor.snk
 		README.md = README.md
+		spelling.dic = spelling.dic
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MetadataExtractor", "MetadataExtractor\MetadataExtractor.csproj", "{13B43D58-5196-45CF-B288-17675E572185}"
@@ -31,8 +36,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Wiki", "Wiki", "{DD8398AB-EE55-4190-819D-F0AED820845B}"
 	ProjectSection(SolutionItems) = preProject
 		wiki\.gitignore = wiki\.gitignore
-		wiki\_JavaReleaseProcess.md = wiki\_JavaReleaseProcess.md
-		wiki\_SampleOutputGeneration.txt = wiki\_SampleOutputGeneration.txt
 		wiki\ChangeLog.md = wiki\ChangeLog.md
 		wiki\Contributing.md = wiki\Contributing.md
 		wiki\FAQ.md = wiki\FAQ.md
@@ -40,8 +43,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Wiki", "Wiki", "{DD8398AB-E
 		wiki\Getting Started (dotnet).md = wiki\Getting Started (dotnet).md
 		wiki\Getting Started (Java).md = wiki\Getting Started (Java).md
 		wiki\Getting Started.md = wiki\Getting Started.md
+		wiki\Getting-Started-(dotnet).md = wiki\Getting-Started-(dotnet).md
+		wiki\Getting-Started.md = wiki\Getting-Started.md
 		wiki\Home.md = wiki\Home.md
+		wiki\ImageDatabase.md = wiki\ImageDatabase.md
+		wiki\ImageDatabaseSummary.md = wiki\ImageDatabaseSummary.md
 		wiki\JPEG.md = wiki\JPEG.md
+		wiki\Makernotes.md = wiki\Makernotes.md
 		wiki\ProGuard.md = wiki\ProGuard.md
 		wiki\project-logo-inkscape.svg = wiki\project-logo-inkscape.svg
 		wiki\project-logo-optimised.svg = wiki\project-logo-optimised.svg
@@ -52,6 +60,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Wiki", "Wiki", "{DD8398AB-E
 		wiki\UsedBy.md = wiki\UsedBy.md
 		wiki\Working-with-test-images.md = wiki\Working-with-test-images.md
 		wiki\XMP.md = wiki\XMP.md
+		wiki\_JavaReleaseProcess.md = wiki\_JavaReleaseProcess.md
+		wiki\_SampleOutputGeneration.txt = wiki\_SampleOutputGeneration.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Specs", "Specs", "{1806EC0F-839C-45A4-9778-11A89CFD5C14}"
@@ -75,6 +85,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Specs", "Specs", "{1806EC0F
 		wiki\docs\PCX File Format.html = wiki\docs\PCX File Format.html
 		wiki\docs\PCX File Format.txt = wiki\docs\PCX File Format.txt
 		wiki\docs\QTFF.pdf = wiki\docs\QTFF.pdf
+		wiki\docs\tga_specs.pdf = wiki\docs\tga_specs.pdf
 		wiki\docs\TIFF6.pdf = wiki\docs\TIFF6.pdf
 		wiki\docs\x3f-raw-format.pdf = wiki\docs\x3f-raw-format.pdf
 		wiki\docs\XMPSpecificationPart1.pdf = wiki\docs\XMPSpecificationPart1.pdf

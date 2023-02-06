@@ -1,28 +1,6 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Diagnostics.CodeAnalysis;
+using static MetadataExtractor.Formats.Exif.Makernotes.SamsungType2MakernoteDirectory;
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -45,26 +23,37 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         {
             return tagType switch
             {
-                SamsungType2MakernoteDirectory.TagMakerNoteVersion => GetMakernoteVersionDescription(),
-                SamsungType2MakernoteDirectory.TagDeviceType => GetDeviceTypeDescription(),
-                SamsungType2MakernoteDirectory.TagSamsungModelId => GetSamsungModelIdDescription(),
+                TagMakerNoteVersion => GetMakernoteVersionDescription(),
+                TagDeviceType => GetDeviceTypeDescription(),
+                TagSamsungModelId => GetSamsungModelIdDescription(),
 
-                SamsungType2MakernoteDirectory.TagCameraTemperature => GetCameraTemperatureDescription(),
+                TagRawDataByteOrder => GetRawDataByteOrderDescription(),
+                TagWhiteBalanceSetup => GetWhiteBalanceSetupDescription(),
 
-                SamsungType2MakernoteDirectory.TagFaceDetect => GetFaceDetectDescription(),
-                SamsungType2MakernoteDirectory.TagFaceRecognition => GetFaceRecognitionDescription(),
+                TagCameraTemperature => GetCameraTemperatureDescription(),
+
+                TagRawDataCfaPattern => GetRawDataCfaPatternDescription(),
+
+                TagFaceDetect => GetFaceDetectDescription(),
+                TagFaceRecognition => GetFaceRecognitionDescription(),
+
+                TagLensType => GetLensTypeDescription(),
+
+                TagColorSpace => GetColorSpaceDescription(),
+                TagSmartRange => GetSmartRangeDescription(),
+
                 _ => base.GetDescription(tagType),
             };
         }
 
         public string? GetMakernoteVersionDescription()
         {
-            return GetVersionBytesDescription(SamsungType2MakernoteDirectory.TagMakerNoteVersion, 2);
+            return GetVersionBytesDescription(TagMakerNoteVersion, 2);
         }
 
         public string? GetDeviceTypeDescription()
         {
-            if (!Directory.TryGetUInt32(SamsungType2MakernoteDirectory.TagDeviceType, out uint value))
+            if (!Directory.TryGetUInt32(TagDeviceType, out uint value))
                 return null;
 
             return value switch
@@ -80,7 +69,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         public string? GetSamsungModelIdDescription()
         {
-            if (!Directory.TryGetUInt32(SamsungType2MakernoteDirectory.TagSamsungModelId, out uint value))
+            if (!Directory.TryGetUInt32(TagSamsungModelId, out uint value))
                 return null;
 
             return value switch
@@ -131,22 +120,81 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             };
         }
 
-        private string? GetCameraTemperatureDescription()
+        public string? GetRawDataByteOrderDescription()
         {
-            return GetFormattedInt(SamsungType2MakernoteDirectory.TagCameraTemperature, "{0} C");
+            return GetIndexedDescription(TagRawDataByteOrder, "Little-endian (Intel)", "Big-endian (Motorola)");
+        }
+
+        public string? GetWhiteBalanceSetupDescription()
+        {
+            return GetIndexedDescription(TagWhiteBalanceSetup, "Auto", "Manual");
+        }
+
+        public string? GetCameraTemperatureDescription()
+        {
+            return GetFormattedInt(TagCameraTemperature, "{0} C");
+        }
+
+
+        public string? GetRawDataCfaPatternDescription()
+        {
+            if (!Directory.TryGetInt32(TagRawDataCfaPattern, out int value))
+                return null;
+
+            return value switch
+            {
+                0 => "Unchanged",
+                1 => "Swap",
+                65535 => "Roll",
+                _ => $"Unknown ({value})"
+            };
         }
 
         public string? GetFaceDetectDescription()
         {
-            return GetIndexedDescription(SamsungType2MakernoteDirectory.TagFaceDetect,
-                "Off", "On");
+            return GetIndexedDescription(TagFaceDetect, "Off", "On");
         }
 
         public string? GetFaceRecognitionDescription()
         {
-            return GetIndexedDescription(SamsungType2MakernoteDirectory.TagFaceRecognition,
-                "Off", "On");
+            return GetIndexedDescription(TagFaceRecognition, "Off", "On");
         }
 
+        public string? GetLensTypeDescription()
+        {
+            return GetIndexedDescription(TagLensType,
+                "Built-in or Manual Lens",
+                "Samsung NX 30mm F2 Pancake",
+                "Samsung NX 18-55mm F3.5-5.6 OIS",
+                "Samsung NX 50-200mm F4-5.6 ED OIS",
+                "Samsung NX 20-50mm F3.5-5.6 ED",
+                "Samsung NX 20mm F2.8 Pancake",
+                "Samsung NX 18-200mm F3.5-6.3 ED OIS",
+                "Samsung NX 60mm F2.8 Macro ED OIS SSA",
+                "Samsung NX 16mm F2.4 Pancake",
+                "Samsung NX 85mm F1.4 ED SSA",
+                "Samsung NX 45mm F1.8",
+                "Samsung NX 45mm F1.8 2D/3D",
+                "Samsung NX 12-24mm F4-5.6 ED",
+                "Samsung NX 16-50mm F2-2.8 S ED OIS",
+                "Samsung NX 10mm F3.5 Fisheye",
+                "Samsung NX 16-50mm F3.5-5.6 Power Zoom ED OIS",
+                null,
+                null,
+                null,
+                null,
+                "Samsung NX 50-150mm F2.8 S ED OIS",
+                "Samsung NX 300mm F2.8 ED OIS");
+        }
+
+        public string? GetColorSpaceDescription()
+        {
+            return GetIndexedDescription(TagColorSpace, "sRGB", "Adobe RGB");
+        }
+
+        public string? GetSmartRangeDescription()
+        {
+            return GetIndexedDescription(TagSmartRange, "Off", "On");
+        }
     }
 }

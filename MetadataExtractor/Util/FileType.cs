@@ -1,30 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Util
 {
@@ -60,15 +34,15 @@ namespace MetadataExtractor.Util
 
         /// <summary>Resource Interchange File Format.</summary>
         Riff = 9,
-        
+
         /// <summary>Waveform Audio File Format.</summary>
-        Wav = 10, // ("WAV", "Waveform Audio File Format", "audio/vnd.wave", "wav", "wave"),
-        
+        Wav = 10,
+
         /// <summary>Audio Video Interleaved.</summary>
-        Avi = 11, //("AVI", "Audio Video Interleaved", "video/vnd.avi", "avi"),
-        
+        Avi = 11,
+
         /// <summary>WebP.</summary>
-        WebP = 12, //("WebP", "WebP", "image/webp", "webp"),
+        WebP = 12,
 
         /// <summary>Sony camera raw.</summary>
         Arw = 13,
@@ -99,7 +73,22 @@ namespace MetadataExtractor.Util
 
         /// <summary>Canon camera raw (version 3).</summary>
         /// <remarks>Shared by CR3 (image) and CRM (video).</remarks>
-        Crx = 22
+        Crx = 22,
+
+        /// <summary>Encapsulated PostScript.</summary>
+        Eps = 23,
+
+        /// <summary>Truevision graphics.</summary>
+        Tga = 24,
+
+        /// <summary>MPEG-1 / MPEG-2 Audio Layer III.</summary>
+        Mp3 = 25,
+
+        /// <summary>High Efficiency Image File Format.</summary>
+        Heif = 26,
+
+        /// <summary>MPEG-4 Part 14.</summary>
+        Mp4 = 27
     }
 
     public static class FileTypeExtensions
@@ -128,9 +117,14 @@ namespace MetadataExtractor.Util
             "RW2",
             "QuickTime",
             "Netpbm",
-            "CRX"
+            "CRX",
+            "EPS",
+            "TGA",
+            "MP3",
+            "HEIC",
+            "MP4"
         };
-        
+
         private static readonly string[] _longNames =
         {
             "Unknown",
@@ -155,7 +149,12 @@ namespace MetadataExtractor.Util
             "Panasonic Camera Raw",
             "QuickTime",
             "Netpbm",
-            "Canon Camera Raw"
+            "Canon Camera Raw",
+            "Encapsulated PostScript",
+            "Truevision Graphics",
+            "MPEG Audio Layer III",
+            "High Efficiency Image File Format",
+            "MPEG-4 Part 14",
         };
 
         private static readonly string?[] _mimeTypes =
@@ -182,7 +181,12 @@ namespace MetadataExtractor.Util
             null,
             "video/quicktime",
             "image/x-portable-graymap",
-            null
+            null,
+            "application/postscript",
+            "image/x-targa",
+            "audio/mpeg",
+            "image/heic",
+            "video/mp4",
         };
 
         private static readonly string[]?[] _extensions =
@@ -209,9 +213,14 @@ namespace MetadataExtractor.Util
             new[] { "rw2" },
             new[] { "mov" },
             new[] { "pbm", "ppm" },
-            new[] { "cr3", "crm" }
+            new[] { "cr3", "crm" },
+            new[] { "eps", "epsf", "epsi" },
+            new[] { "tga", "icb", "vda", "vst" },
+            new[] { "mp3" },
+            new[] { "heic", "heif", "avci" },
+            new[] { "mp4", "m4a", "m4p", "m4b", "m4r", "m4v" }
         };
-        
+
         public static string GetName(this FileType fileType)
         {
             var i = (int)fileType;
@@ -219,7 +228,7 @@ namespace MetadataExtractor.Util
                 throw new ArgumentException($"Invalid {nameof(FileType)} enum member.", nameof(fileType));
             return _shortNames[i];
         }
-        
+
         public static string GetLongName(this FileType fileType)
         {
             var i = (int)fileType;
@@ -227,7 +236,7 @@ namespace MetadataExtractor.Util
                 throw new ArgumentException($"Invalid {nameof(FileType)} enum member.", nameof(fileType));
             return _longNames[i];
         }
-        
+
         public static string? GetMimeType(this FileType fileType)
         {
             var i = (int)fileType;
@@ -235,7 +244,7 @@ namespace MetadataExtractor.Util
                 throw new ArgumentException($"Invalid {nameof(FileType)} enum member.", nameof(fileType));
             return _mimeTypes[i];
         }
-        
+
         public static string? GetCommonExtension(this FileType fileType)
         {
             var i = (int)fileType;
@@ -243,11 +252,11 @@ namespace MetadataExtractor.Util
                 throw new ArgumentException($"Invalid {nameof(FileType)} enum member.", nameof(fileType));
             return _extensions[i]?.FirstOrDefault();
         }
-        
+
         public static IEnumerable<string>? GetAllExtensions(this FileType fileType)
         {
             var i = (int)fileType;
-            if (i < 0 || i >= _mimeTypes.Length)
+            if (i < 0 || i >= _extensions.Length)
                 throw new ArgumentException($"Invalid {nameof(FileType)} enum member.", nameof(fileType));
             return _extensions[i];
         }

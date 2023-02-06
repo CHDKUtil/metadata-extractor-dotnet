@@ -1,29 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -74,7 +49,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         public string? GetCameraType2Description()
         {
             var cameratype = Directory.GetString(OlympusEquipmentMakernoteDirectory.TagCameraType2);
-            if (cameratype == null)
+            if (cameratype is null)
                 return null;
 
             if (OlympusMakernoteDirectory.OlympusCameraTypes.TryGetValue(cameratype, out var mapped))
@@ -101,7 +76,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         {
             var str = Directory.GetString(OlympusEquipmentMakernoteDirectory.TagLensType);
 
-            if (str == null)
+            if (str is null)
                 return null;
 
             // The string contains six numbers:
@@ -123,7 +98,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             return int.TryParse(values[0], out int num1) &&
                    int.TryParse(values[2], out int num2) &&
                    int.TryParse(values[3], out int num3) &&
-                   _olympusLensTypes.TryGetValue($"{num1:X} {num2:X2} {num3:X2}", out string lensType)
+                   _olympusLensTypes.TryGetValue($"{num1:X} {num2:X2} {num3:X2}", out string? lensType)
                        ? lensType
                        : null;
         }
@@ -178,7 +153,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         {
             var str = Directory.GetString(OlympusEquipmentMakernoteDirectory.TagExtender);
 
-            if (str == null)
+            if (str is null)
                 return null;
 
             // The string contains six numbers:
@@ -199,7 +174,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
             return int.TryParse(values[0], out int num1) &&
                    int.TryParse(values[2], out int num2) &&
-                   _olympusExtenderTypes.TryGetValue($"{num1:X} {num2:X2}", out string extenderType)
+                   _olympusExtenderTypes.TryGetValue($"{num1:X} {num2:X2}", out string? extenderType)
                        ? extenderType
                        : null;
         }
@@ -216,7 +191,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 "None", "FL-20", "FL-50", "RF-11", "TF-22", "FL-36", "FL-50R", "FL-36R");
         }
 
-        private static readonly Dictionary<string, string> _olympusLensTypes = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> _olympusLensTypes = new()
         {
             { "0 00 00", "None" },
             // Olympus lenses (also Kenko Tokina)
@@ -246,7 +221,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             { "0 12 10", "Olympus M.Zuiko Digital ED 60mm F2.8 Macro" }, //20
             { "0 13 10", "Olympus M.Zuiko Digital 14-42mm F3.5-5.6 II R" }, //PH/20
             { "0 14 10", "Olympus M.Zuiko Digital ED 40-150mm F4.0-5.6 R" }, //19
-          // '0 14 10.1", "Olympus M.Zuiko Digital ED 14-150mm F4.0-5.6 II" }, //11 (questionable & unconfirmed -- all samples I can find are '0 3 10' - PH)
+            // '0 14 10.1", "Olympus M.Zuiko Digital ED 14-150mm F4.0-5.6 II" }, //11 (questionable & unconfirmed -- all samples I can find are '0 3 10' - PH)
             { "0 15 00", "Olympus Zuiko Digital ED 7-14mm F4.0" },
             { "0 15 10", "Olympus M.Zuiko Digital ED 75mm F1.8" }, //PH
             { "0 16 10", "Olympus M.Zuiko Digital 17mm F1.8" }, //20
@@ -321,7 +296,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             { "2 20 10", "Lumix G Vario 12-32mm F3.5-5.6 Asph. Mega OIS" }, //20
             { "2 21 10", "Leica DG Nocticron 42.5mm F1.2 Asph. Power OIS" }, //20
             { "2 22 10", "Leica DG Summilux 15mm F1.7 Asph." }, //20
-          // '2 23 10", "Lumix G Vario 35-100mm F4.0-5.6 Asph. Mega OIS" }, //20 (guess)
+            // '2 23 10", "Lumix G Vario 35-100mm F4.0-5.6 Asph. Mega OIS" }, //20 (guess)
             { "2 24 10", "Lumix G Macro 30mm F2.8 Asph. Mega OIS" }, //20
             { "2 25 10", "Lumix G 42.5mm F1.7 Asph. Power OIS" }, //20
             { "3 01 00", "Leica D Vario Elmarit 14-50mm F2.8-3.5 Asph." }, //11
@@ -330,7 +305,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             { "5 01 10", "Tamron 14-150mm F3.5-5.8 Di III" } //20 (model C001)
         };
 
-        private static readonly Dictionary<string, string> _olympusExtenderTypes = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> _olympusExtenderTypes = new()
         {
             { "0 00", "None" },
             { "0 04", "Olympus Zuiko Digital EC-14 1.4x Teleconverter" },

@@ -1,31 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System;
-using System.Text;
-using MetadataExtractor.IO;
-using Xunit;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Tests.IO
 {
@@ -210,8 +183,8 @@ namespace MetadataExtractor.Tests.IO
         [Fact]
         public void GetFloat32()
         {
-            const int nanBits = 0x7fc00000;
-            Assert.True(float.IsNaN(BitConverter.ToSingle(BitConverter.GetBytes(nanBits), 0)));
+            const int NanBits = 0x7fc00000;
+            Assert.True(float.IsNaN(BitConverter.ToSingle(BitConverter.GetBytes(NanBits), 0)));
 
             var reader = CreateReader(0x7f, 0xc0, 0x00, 0x00);
 
@@ -221,8 +194,8 @@ namespace MetadataExtractor.Tests.IO
         [Fact]
         public void GetFloat64()
         {
-            const long nanBits = unchecked((long)0xfff0000000000001L);
-            Assert.True(double.IsNaN(BitConverter.Int64BitsToDouble(nanBits)));
+            const long NanBits = unchecked((long)0xfff0000000000001L);
+            Assert.True(double.IsNaN(BitConverter.Int64BitsToDouble(NanBits)));
 
             var reader = CreateReader(0xff, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01);
 

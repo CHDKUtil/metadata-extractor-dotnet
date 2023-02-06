@@ -1,31 +1,6 @@
-﻿#region License
-//
-// Copyright 2002-2019 Drew Noakes
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+﻿// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Text;
 
 using JetBrains.Annotations;
 
@@ -240,7 +215,7 @@ namespace MetadataExtractor
 
         #region Int64
 
-        /// <summary>Returns a tag's value as an <see cref="int"/>, or throws if conversion is not possible.</summary>
+        /// <summary>Returns a tag's value as a <see cref="long"/>, or throws if conversion is not possible.</summary>
         /// <remarks>
         /// If the value is <see cref="IConvertible"/>, then that interface is used for conversion of the value.
         /// If the value is an array of <see cref="IConvertible"/> having length one, then the single item is converted.
@@ -270,6 +245,46 @@ namespace MetadataExtractor
                 catch
                 {
                     // ignored
+                }
+            }
+
+            value = default;
+            return false;
+        }
+
+        #endregion
+
+        #region UInt64
+
+        /// <summary>Returns a tag's value as an <see cref="ulong"/>, or throws if conversion is not possible.</summary>
+        /// <remarks>
+        /// If the value is <see cref="IConvertible"/>, then that interface is used for conversion of the value.
+        /// If the value is an array of <see cref="IConvertible"/> having length one, then the single item is converted.
+        /// </remarks>
+        /// <exception cref="MetadataException">No value exists for <paramref name="tagType"/>, or the value is not convertible to the requested type.</exception>
+        [Pure]
+        public static ulong GetUInt64(this Directory directory, int tagType)
+        {
+            if (directory.TryGetUInt64(tagType, out ulong value))
+                return value;
+
+            return ThrowValueNotPossible<ulong>(directory, tagType);
+        }
+
+        [Pure]
+        public static bool TryGetUInt64(this Directory directory, int tagType, out ulong value)
+        {
+            var convertible = GetConvertibleObject(directory, tagType);
+
+            if (convertible != null)
+            {
+                try
+                {
+                    value = convertible.ToUInt64(null);
+                    return true;
+                }
+                catch
+                {
                     // ignored
                 }
             }
@@ -405,13 +420,13 @@ namespace MetadataExtractor
 
         /// <summary>Gets the specified tag's value as a String array, if possible.</summary>
         /// <remarks>Only supported where the tag is set as String[], String, int[], byte[] or Rational[].</remarks>
-        /// <returns>the tag's value as an array of Strings. If the value is unset or cannot be converted, <c>null</c> is returned.</returns>
+        /// <returns>the tag's value as an array of Strings. If the value is unset or cannot be converted, <see langword="null" /> is returned.</returns>
         [Pure]
         public static string[]? GetStringArray(this Directory directory, int tagType)
         {
             var o = directory.GetObject(tagType);
 
-            if (o == null)
+            if (o is null)
                 return null;
 
             if (o is string[] strings)
@@ -420,8 +435,8 @@ namespace MetadataExtractor
             if (o is string s)
                 return new[] { s };
 
-            if (o is StringValue)
-                return new[] { o.ToString() };
+            if (o is StringValue sv)
+                return new[] { sv.ToString() };
 
             if (o is StringValue[] stringValues)
             {
@@ -460,18 +475,18 @@ namespace MetadataExtractor
 
         /// <summary>Gets the specified tag's value as a StringValue array, if possible.</summary>
         /// <remarks>Only succeeds if the tag is set as StringValue[], or String.</remarks>
-        /// <returns>the tag's value as an array of StringValues. If the value is unset or cannot be converted, <c>null</c> is returned.</returns>
+        /// <returns>the tag's value as an array of StringValues. If the value is unset or cannot be converted, <see langword="null" /> is returned.</returns>
         [Pure]
         public static StringValue[]? GetStringValueArray(this Directory directory, int tagType)
         {
             var o = directory.GetObject(tagType);
 
-            if (o == null)
+            if (o is null)
                 return null;
             if (o is StringValue[] stringValues)
                 return stringValues;
             if (o is StringValue sv)
-                return new [] { sv };
+                return new[] { sv };
 
             return null;
         }
@@ -484,7 +499,7 @@ namespace MetadataExtractor
         {
             var o = directory.GetObject(tagType);
 
-            if (o == null)
+            if (o is null)
                 return null;
 
             if (o is int[] ints)
@@ -545,7 +560,7 @@ namespace MetadataExtractor
         {
             var o = directory.GetObject(tagType);
 
-            if (o == null)
+            if (o is null)
                 return null;
 
             if (o is StringValue value)
@@ -614,24 +629,33 @@ namespace MetadataExtractor
 
         // This seems to cover all known Exif date strings
         // Note that "    :  :     :  :  " is a valid date string according to the Exif spec (which means 'unknown date'): http://www.awaresystems.be/imaging/tiff/tifftags/privateifd/exif/datetimeoriginal.html
-        // Custom format reference: https://msdn.microsoft.com/en-us/library/8kb3ddd4(v=vs.110).aspx
+        // Custom format reference: https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings
         private static readonly string[] _datePatterns =
         {
             "yyyy:MM:dd HH:mm:ss.fff",
+            "yyyy:MM:dd HH:mm:ss.fffzzz",
             "yyyy:MM:dd HH:mm:ss",
+            "yyyy:MM:dd HH:mm:sszzz",
             "yyyy:MM:dd HH:mm",
+            "yyyy:MM:dd HH:mmzzz",
+            "yyyy-MM-dd HH:mm:ss.fff",
+            "yyyy-MM-dd HH:mm:ss.fffzzz",
             "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd HH:mm:sszzz",
             "yyyy-MM-dd HH:mm",
+            "yyyy-MM-dd HH:mmzzz",
             "yyyy.MM.dd HH:mm:ss",
+            "yyyy.MM.dd HH:mm:sszzz",
             "yyyy.MM.dd HH:mm",
+            "yyyy.MM.dd HH:mmzzz",
             "yyyy-MM-ddTHH:mm:ss.fff",
+            "yyyy-MM-ddTHH:mm:ss.fffzzz",
             "yyyy-MM-ddTHH:mm:ss.ff",
             "yyyy-MM-ddTHH:mm:ss.f",
             "yyyy-MM-ddTHH:mm:ss",
-            "yyyy-MM-ddTHH:mm.fff",
-            "yyyy-MM-ddTHH:mm.ff",
-            "yyyy-MM-ddTHH:mm.f",
+            "yyyy-MM-ddTHH:mm:sszzz",
             "yyyy-MM-ddTHH:mm",
+            "yyyy-MM-ddTHH:mmzzz",
             "yyyy:MM:dd",
             "yyyy-MM-dd",
             "yyyy-MM",
@@ -640,14 +664,22 @@ namespace MetadataExtractor
         };
 
         /// <summary>Attempts to return the specified tag's value as a DateTime.</summary>
-        /// <remarks>If the underlying value is a <see cref="string"/>, then attempts will be made to parse it.</remarks>
+        /// <remarks>
+        /// <para>
+        /// If the underlying value is a <see cref="string"/>, then attempts will be made to parse it.
+        /// </para>
+        /// <para>
+        /// If that string contains a time-zone offset, the returned <see cref="DateTime"/> will have kind <see cref="DateTimeKind.Utc"/>,
+        /// otherwise it will be <see cref="DateTimeKind.Unspecified"/>.
+        /// </para>
+        /// </remarks>
         /// <returns><c>true</c> if a DateTime was returned, otherwise <c>false</c>.</returns>
         [Pure]
         public static bool TryGetDateTime(this Directory directory, int tagType /*, TimeZoneInfo? timeZone = null*/, out DateTime dateTime)
         {
             var o = directory.GetObject(tagType);
 
-            if (o == null)
+            if (o is null)
             {
                 dateTime = default;
                 return false;
@@ -666,8 +698,10 @@ namespace MetadataExtractor
 
             if (s != null)
             {
-                if (DateTime.TryParseExact(s, _datePatterns, null, DateTimeStyles.AllowWhiteSpaces, out dateTime))
+                if (DateTime.TryParseExact(s, _datePatterns, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.AdjustToUniversal, out dateTime))
+                {
                     return true;
+                }
 
                 dateTime = default;
                 return false;
@@ -702,13 +736,13 @@ namespace MetadataExtractor
         }
 
         /// <summary>Returns the specified tag's value as a Rational.</summary>
-        /// <remarks>If the value is unset or cannot be converted, <c>null</c> is returned.</remarks>
+        /// <remarks>If the value is unset or cannot be converted, <see langword="null" /> is returned.</remarks>
         [Pure]
         public static bool TryGetRational(this Directory directory, int tagType, out Rational value)
         {
             var o = directory.GetObject(tagType);
 
-            if (o == null)
+            if (o is null)
             {
                 value = default;
                 return false;
@@ -741,7 +775,7 @@ namespace MetadataExtractor
         #endregion
 
         /// <summary>Returns the specified tag's value as an array of Rational.</summary>
-        /// <remarks>If the value is unset or cannot be converted, <c>null</c> is returned.</remarks>
+        /// <remarks>If the value is unset or cannot be converted, <see langword="null" /> is returned.</remarks>
         [Pure]
         public static Rational[]? GetRationalArray(this Directory directory, int tagType)
         {
@@ -755,14 +789,14 @@ namespace MetadataExtractor
         /// </remarks>
         /// <returns>
         /// the String representation of the tag's value, or
-        /// <c>null</c> if the tag hasn't been defined.
+        /// <see langword="null" /> if the tag hasn't been defined.
         /// </returns>
         [Pure]
         public static string? GetString(this Directory directory, int tagType)
         {
             var o = directory.GetObject(tagType);
 
-            if (o == null)
+            if (o is null)
                 return null;
 
             if (o is Rational r)
@@ -785,112 +819,112 @@ namespace MetadataExtractor
 
                 if (componentType == typeof(float))
                 {
-                    var vals = (float[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (float[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.AppendFormat("{0:0.###}", vals[i]);
+                        str.AppendFormat("{0:0.###}", values[i]);
                     }
                 }
                 else if (componentType == typeof(double))
                 {
-                    var vals = (double[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (double[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.AppendFormat("{0:0.###}", vals[i]);
+                        str.AppendFormat("{0:0.###}", values[i]);
                     }
                 }
                 else if (componentType == typeof(int))
                 {
-                    var vals = (int[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (int[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.Append(vals[i]);
+                        str.Append(values[i]);
                     }
                 }
                 else if (componentType == typeof(uint))
                 {
-                    var vals = (uint[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (uint[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.Append(vals[i]);
+                        str.Append(values[i]);
                     }
                 }
                 else if (componentType == typeof(short))
                 {
-                    var vals = (short[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (short[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.Append(vals[i]);
+                        str.Append(values[i]);
                     }
                 }
                 else if (componentType == typeof(ushort))
                 {
-                    var vals = (ushort[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (ushort[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.Append(vals[i]);
+                        str.Append(values[i]);
                     }
                 }
                 else if (componentType == typeof(byte))
                 {
-                    var vals = (byte[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (byte[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.Append(vals[i]);
+                        str.Append(values[i]);
                     }
                 }
                 else if (componentType == typeof(sbyte))
                 {
-                    var vals = (sbyte[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (sbyte[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.Append(vals[i]);
+                        str.Append(values[i]);
                     }
                 }
                 else if (componentType == typeof(Rational))
                 {
-                    var vals = (Rational[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (Rational[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.Append(vals[i]);
+                        str.Append(values[i]);
                     }
                 }
                 else if (componentType == typeof(string))
                 {
-                    var vals = (string[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (string[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.Append(vals[i]);
+                        str.Append(values[i]);
                     }
                 }
-                else if (componentType.IsByRef)
+                else if (componentType is { IsByRef: true })
                 {
-                    var vals = (object[])array;
-                    for (var i = 0; i < vals.Length; i++)
+                    var values = (object[])array;
+                    for (var i = 0; i < values.Length; i++)
                     {
                         if (i != 0)
                             str.Append(' ');
-                        str.Append(vals[i]);
+                        str.Append(values[i]);
                     }
                 }
                 else
@@ -939,8 +973,7 @@ namespace MetadataExtractor
         public static string? GetString(this Directory directory, int tagType, Encoding encoding)
         {
             var bytes = directory.GetByteArray(tagType);
-            return bytes == null
-                ? null
+            return bytes is null ? null
                 : encoding.GetString(bytes, 0, bytes.Length);
         }
 
@@ -948,7 +981,7 @@ namespace MetadataExtractor
         public static StringValue GetStringValue(this Directory directory, int tagType)
         {
             var o = directory.GetObject(tagType);
-            
+
             if (o is StringValue value)
                 return value;
 
@@ -960,13 +993,13 @@ namespace MetadataExtractor
         {
             var o = directory.GetObject(tagType);
 
-            if (o == null)
+            if (o is null)
                 return null;
 
             if (o is IConvertible convertible)
                 return convertible;
 
-            if (o is Array array && array.Length == 1 && array.Rank == 1)
+            if (o is Array { Length: 1, Rank: 1 } array)
                 return array.GetValue(0) as IConvertible;
 
             return null;
@@ -976,10 +1009,10 @@ namespace MetadataExtractor
         {
             var o = directory.GetObject(tagType);
 
-            if (o == null)
+            if (o is null)
                 throw new MetadataException($"No value exists for tag {directory.GetTagName(tagType)}.");
 
-            throw new MetadataException($"Tag {tagType} cannot be converted to {typeof(T).Name}.  It is of type {o.GetType()} with value: {o}");
+            throw new MetadataException($"Tag {tagType} cannot be converted to {typeof(T).Name}. It is of type {o.GetType()} with value: {o}");
         }
     }
 }

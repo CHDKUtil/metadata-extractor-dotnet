@@ -1,28 +1,5 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Text;
 using MetadataExtractor.Formats.Exif.Makernotes;
 
 namespace MetadataExtractor
@@ -67,7 +44,7 @@ namespace MetadataExtractor
             return X == other.X && Y == other.Y && Width == other.Width && Height == other.Height && string.Equals(Name, other.Name) && Equals(Age, other.Age);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is null)
                 return false;
@@ -81,11 +58,11 @@ namespace MetadataExtractor
             unchecked
             {
                 var hashCode = X;
-                hashCode = (hashCode*397) ^ Y;
-                hashCode = (hashCode*397) ^ Width;
-                hashCode = (hashCode*397) ^ Height;
-                hashCode = (hashCode*397) ^ (Name?.GetHashCode() ?? 0);
-                hashCode = (hashCode*397) ^ (Age?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ Y;
+                hashCode = (hashCode * 397) ^ Width;
+                hashCode = (hashCode * 397) ^ Height;
+                hashCode = (hashCode * 397) ^ (Name?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Age?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }

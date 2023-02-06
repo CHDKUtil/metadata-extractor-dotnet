@@ -1,31 +1,6 @@
-﻿#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+﻿// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Collections.Generic;
-using System.Text;
 using MetadataExtractor.Formats.Png;
-using Xunit;
 
 namespace MetadataExtractor.Tests.Formats.Png
 {
@@ -110,14 +85,14 @@ namespace MetadataExtractor.Tests.Formats.Png
             Assert.Equal("Metres", descriptor.GetUnitSpecifierDescription());
             Assert.Equal("Metres", directory.GetDescription(PngDirectory.TagUnitSpecifier));
         }
-        
+
         [Fact]
         public void GetTextualDataDescription()
         {
-            var _latin1Encoding = Encoding.GetEncoding("iso-8859-1"); // Latin-1
+            var latin1Encoding = Encoding.GetEncoding("iso-8859-1"); // Latin-1
 
             var textPairs = new List<KeyValuePair>();
-            StringValue value = new StringValue(_latin1Encoding.GetBytes("value"), _latin1Encoding);
+            StringValue value = new StringValue(latin1Encoding.GetBytes("value"), latin1Encoding);
             textPairs.Add(new KeyValuePair("keyword", value));
 
             PngDirectory directory = new PngDirectory(PngChunkType.tEXt);
@@ -145,13 +120,13 @@ namespace MetadataExtractor.Tests.Formats.Png
             PngDirectory directory = new PngDirectory(PngChunkType.bKGD);
             PngDescriptor descriptor = new PngDescriptor(directory);
 
-            directory.Set(PngDirectory.TagBackgroundColor, new byte[]{52});
+            directory.Set(PngDirectory.TagBackgroundColor, new byte[] { 52 });
             Assert.Equal("Palette Index 52", descriptor.GetBackgroundColorDescription());
             Assert.Equal("Palette Index 52", directory.GetDescription(PngDirectory.TagBackgroundColor));
-            directory.Set(PngDirectory.TagBackgroundColor, new byte[]{0, 52});
+            directory.Set(PngDirectory.TagBackgroundColor, new byte[] { 0, 52 });
             Assert.Equal("Greyscale Level 52", descriptor.GetBackgroundColorDescription());
             Assert.Equal("Greyscale Level 52", directory.GetDescription(PngDirectory.TagBackgroundColor));
-            directory.Set(PngDirectory.TagBackgroundColor, new byte[]{0, 50, 0, 51, 0, 52});
+            directory.Set(PngDirectory.TagBackgroundColor, new byte[] { 0, 50, 0, 51, 0, 52 });
             Assert.Equal("R 50, G 51, B 52", descriptor.GetBackgroundColorDescription());
             Assert.Equal("R 50, G 51, B 52", directory.GetDescription(PngDirectory.TagBackgroundColor));
         }

@@ -1,34 +1,9 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Collections.Generic;
-using System.IO;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Icc;
 using MetadataExtractor.Formats.Riff;
 using MetadataExtractor.Formats.Xmp;
-using MetadataExtractor.IO;
 
 namespace MetadataExtractor.Formats.WebP
 {
@@ -72,7 +47,12 @@ namespace MetadataExtractor.Formats.WebP
             {
                 case "EXIF":
                 {
-                    _directories.AddRange(new ExifReader().Extract(new ByteArrayReader(payload)));
+                    // We have seen WebP images with and without the preamble here. It's likely that some software incorrectly
+                    // copied an entire JPEG segment into the WebP image. Regardless, we can handle it here.
+                    var reader = ExifReader.StartsWithJpegExifPreamble(payload)
+                        ? new ByteArrayReader(payload, ExifReader.JpegSegmentPreambleLength)
+                        : new ByteArrayReader(payload);
+                    _directories.AddRange(new ExifReader().Extract(reader));
                     break;
                 }
                 case "ICCP":
@@ -99,12 +79,15 @@ namespace MetadataExtractor.Formats.WebP
                     try
                     {
                         // Flags
-//                      var hasFragments = reader.GetBit(0);
+                        // bit 0: has fragments
+                        // bit 1: is animation
+                        // bit 2: has XMP
+                        // bit 3: has Exif
+                        // bit 4: has alpha
+                        // big 5: has ICC
                         isAnimation = reader.GetBit(1);
-//                      var hasXmp = reader.GetBit(2);
-//                      var hasExif = reader.GetBit(3);
                         hasAlpha = reader.GetBit(4);
-//                      var hasIcc = reader.GetBit(5);
+
                         // Image size
                         widthMinusOne = reader.GetInt24(4);
                         heightMinusOne = reader.GetInt24(7);
@@ -115,7 +98,7 @@ namespace MetadataExtractor.Formats.WebP
                     }
 
                     var directory = new WebPDirectory();
-                    if (error == null)
+                    if (error is null)
                     {
                         directory.Set(WebPDirectory.TagImageWidth, widthMinusOne + 1);
                         directory.Set(WebPDirectory.TagImageHeight, heightMinusOne + 1);
@@ -159,7 +142,7 @@ namespace MetadataExtractor.Formats.WebP
                     }
 
                     var directory = new WebPDirectory();
-                    if (error == null)
+                    if (error is null)
                     {
                         directory.Set(WebPDirectory.TagImageWidth, widthMinusOne + 1);
                         directory.Set(WebPDirectory.TagImageHeight, heightMinusOne + 1);
@@ -198,7 +181,7 @@ namespace MetadataExtractor.Formats.WebP
                     }
 
                     var directory = new WebPDirectory();
-                    if (error == null)
+                    if (error is null)
                     {
                         directory.Set(WebPDirectory.TagImageWidth, width);
                         directory.Set(WebPDirectory.TagImageHeight, height);
@@ -209,6 +192,11 @@ namespace MetadataExtractor.Formats.WebP
                     break;
                 }
             }
+        }
+
+        public void AddError(string errorMessage)
+        {
+            _directories.Add(new ErrorDirectory(errorMessage));
         }
     }
 }

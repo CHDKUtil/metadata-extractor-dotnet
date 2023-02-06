@@ -1,7 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Iptc;
 using MetadataExtractor.Formats.Jpeg;
@@ -127,7 +125,7 @@ namespace MetadataExtractor.Samples
                 // obtain the Exif SubIFD directory
                 var directory = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
 
-                if (directory == null)
+                if (directory is null)
                     return null;
 
                 // query the tag's value
@@ -142,7 +140,7 @@ namespace MetadataExtractor.Samples
                 // obtain a specific directory
                 var directory = directories.OfType<ExifSubIfdDirectory>().FirstOrDefault();
 
-                if (directory == null)
+                if (directory is null)
                     return null;
 
                 // create a descriptor

@@ -1,29 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif
 {
@@ -177,6 +152,9 @@ namespace MetadataExtractor.Formats.Exif
         /// <remarks>Seems to be used exclusively by raw formats, referencing one or two IFDs.</remarks>
         public const int TagSubIfdOffset = 0x014a;
 
+        public const int TagExtraSamples = 0x0152;
+        public const int TagSampleFormat = 0x0153;
+
         public const int TagTransferRange = 0x0156;
 
         public const int TagJpegTables = 0x015B;
@@ -212,6 +190,8 @@ namespace MetadataExtractor.Formats.Exif
 
         public const int TagRating = 0x4746;
 
+        public const int TagRatingPercent = 0x4749;
+
         public const int TagCfaRepeatPatternDim = 0x828D;
 
         /// <summary>There are two definitions for CFA pattern, I don't know the difference...</summary>
@@ -228,11 +208,21 @@ namespace MetadataExtractor.Formats.Exif
         /// <summary>The actual F-number(F-stop) of lens when the image was taken.</summary>
         public const int TagFNumber = 0x829D;
 
+        public const int TagPixelScale = 0x830E;
+
         public const int TagIptcNaa = 0x83BB;
+
+        public const int TagModelTiePoint = 0x8482;
 
         public const int TagPhotoshopSettings = 0x8649;
 
         public const int TagInterColorProfile = 0x8773;
+
+        public const int TagGeoTiffGeoKeys = 0x87af;
+
+        public const int TagGeoTiffGeoDoubleParams = 0x87b0;
+
+        public const int TagGeoTiffGeoAsciiParams = 0x87b1;
 
         /// <summary>Exposure program that the camera used when image was taken.</summary>
         /// <remarks>
@@ -262,9 +252,16 @@ namespace MetadataExtractor.Formats.Exif
 
         public const int TagInterlace = 0x8829;
 
+        [Obsolete("Use TagTimeZoneOffset instead.")]
         public const int TagTimeZoneOffsetTiffEp = 0x882A;
 
+        [Obsolete("Use TagSelfTimerMode instead.")]
         public const int TagSelfTimerModeTiffEp = 0x882B;
+
+        /// <summary>Non-standard, but in use.</summary>
+        public const int TagTimeZoneOffset = 0x882A;
+
+        public const int TagSelfTimerMode = 0x882B;
 
         /// <summary>Applies to ISO tag.</summary>
         /// <remarks>
@@ -283,16 +280,23 @@ namespace MetadataExtractor.Formats.Exif
 
         public const int TagRecommendedExposureIndex = 0x8832;
 
-        /// <summary>Non-standard, but in use.</summary>
-        public const int TagTimeZoneOffset = 0x882A;
+        public const int TagIsoSpeed = 0x8833;
 
-        public const int TagSelfTimerMode = 0x882B;
+        public const int TagIsoSpeedLatitudeYYY = 0x8834;
+
+        public const int TagIsoSpeedLatitudeZZZ = 0x8835;
 
         public const int TagExifVersion = 0x9000;
 
         public const int TagDateTimeOriginal = 0x9003;
 
         public const int TagDateTimeDigitized = 0x9004;
+
+        public const int TagTimeZone = 0x9010;
+
+        public const int TagTimeZoneOriginal = 0x9011;
+
+        public const int TagTimeZoneDigitized = 0x9012;
 
         public const int TagComponentsConfiguration = 0x9101;
 
@@ -713,6 +717,9 @@ namespace MetadataExtractor.Formats.Exif
         /// <summary>String.</summary>
         public const int TagLensSerialNumber = 0xA435;
 
+        public const int TagGdalMetadata = 0xA480;
+        public const int TagGdalNoData = 0xA481;
+
         /// <summary>Rational64u.</summary>
         public const int TagGamma = 0xA500;
 
@@ -725,6 +732,11 @@ namespace MetadataExtractor.Formats.Exif
         public const int TagPadding = 0xEA1C;
 
         public const int TagLens = 0xFDEA;
+
+        protected ExifDirectoryBase(Dictionary<int, string> tagNameMap)
+            : base(tagNameMap)
+        {
+        }
 
         protected static void AddExifTagNames(Dictionary<int, string> map)
         {
@@ -769,6 +781,8 @@ namespace MetadataExtractor.Formats.Exif
             map[TagTileOffsets] = "Tile Offsets";
             map[TagTileByteCounts] = "Tile Byte Counts";
             map[TagSubIfdOffset] = "Sub IFD Pointer(s)";
+            map[TagExtraSamples] = "Extra Samples";
+            map[TagSampleFormat] = "Sample Format";
             map[TagTransferRange] = "Transfer Range";
             map[TagJpegTables] = "JPEG Tables";
             map[TagJpegProc] = "JPEG Proc";
@@ -790,13 +804,16 @@ namespace MetadataExtractor.Formats.Exif
             map[TagRelatedImageWidth] = "Related Image Width";
             map[TagRelatedImageHeight] = "Related Image Height";
             map[TagRating] = "Rating";
+            map[TagRatingPercent] = "Rating Percent";
             map[TagCfaRepeatPatternDim] = "CFA Repeat Pattern Dim";
             map[TagCfaPattern2] = "CFA Pattern";
             map[TagBatteryLevel] = "Battery Level";
             map[TagCopyright] = "Copyright";
             map[TagExposureTime] = "Exposure Time";
             map[TagFNumber] = "F-Number";
+            map[TagPixelScale] = "Pixel Scale";
             map[TagIptcNaa] = "IPTC/NAA";
+            map[TagModelTiePoint] = "Model Tie Point";
             map[TagPhotoshopSettings] = "Photoshop Settings";
             map[TagInterColorProfile] = "Inter Color Profile";
             map[TagExposureProgram] = "Exposure Program";
@@ -804,16 +821,20 @@ namespace MetadataExtractor.Formats.Exif
             map[TagIsoEquivalent] = "ISO Speed Ratings";
             map[TagOptoElectricConversionFunction] = "Opto-electric Conversion Function (OECF)";
             map[TagInterlace] = "Interlace";
-            map[TagTimeZoneOffsetTiffEp] = "Time Zone Offset";
-            map[TagSelfTimerModeTiffEp] = "Self Timer Mode";
+            map[TagTimeZoneOffset] = "Time Zone Offset";
+            map[TagSelfTimerMode] = "Self Timer Mode";
             map[TagSensitivityType] = "Sensitivity Type";
             map[TagStandardOutputSensitivity] = "Standard Output Sensitivity";
             map[TagRecommendedExposureIndex] = "Recommended Exposure Index";
-            map[TagTimeZoneOffset] = "Time Zone Offset";
-            map[TagSelfTimerMode] = "Self Timer Mode";
+            map[TagIsoSpeed] = "ISO Speed";
+            map[TagIsoSpeedLatitudeYYY] = "ISO Speed Latitude yyy";
+            map[TagIsoSpeedLatitudeZZZ] = "ISO Speed Latitude zzz";
             map[TagExifVersion] = "Exif Version";
             map[TagDateTimeOriginal] = "Date/Time Original";
             map[TagDateTimeDigitized] = "Date/Time Digitized";
+            map[TagTimeZone] = "Time Zone";
+            map[TagTimeZoneOriginal] = "Time Zone Original";
+            map[TagTimeZoneDigitized] = "Time Zone Digitized";
             map[TagComponentsConfiguration] = "Components Configuration";
             map[TagCompressedAverageBitsPerPixel] = "Compressed Bits Per Pixel";
             map[TagShutterSpeed] = "Shutter Speed Value";
@@ -882,6 +903,8 @@ namespace MetadataExtractor.Formats.Exif
             map[TagLensMake] = "Lens Make";
             map[TagLensModel] = "Lens Model";
             map[TagLensSerialNumber] = "Lens Serial Number";
+            map[TagGdalMetadata] = "GDAL Metadata";
+            map[TagGdalNoData] = "GDAL NoData";
             map[TagGamma] = "Gamma";
             map[TagPrintImageMatchingInfo] = "Print Image Matching (PIM) Info";
             map[TagPanasonicTitle] = "Panasonic Title";

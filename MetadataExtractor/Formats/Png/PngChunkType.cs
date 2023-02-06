@@ -1,32 +1,5 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
 using JetBrains.Annotations;
 
 namespace MetadataExtractor.Formats.Png
@@ -36,8 +9,10 @@ namespace MetadataExtractor.Formats.Png
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     public sealed class PngChunkType
     {
-        private static readonly ICollection<string> IdentifiersAllowingMultiples
+        private static readonly ICollection<string> _identifiersAllowingMultiples
             = new HashSet<string> { "IDAT", "sPLT", "iTXt", "tEXt", "zTXt" };
+
+#pragma warning disable IDE1006 // Naming Styles
 
         #region Standard critical chunks
 
@@ -58,7 +33,7 @@ namespace MetadataExtractor.Formats.Png
         ///   <item><b>interlace method</b> 1 byte, indicates the transmission order of image data, currently only 0 (no interlace) and 1 (Adam7 interlace) are in the standard</item>
         /// </list>
         /// </remarks>
-        public static readonly PngChunkType IHDR = new PngChunkType("IHDR");
+        public static readonly PngChunkType IHDR = new("IHDR");
 
         /// <summary>
         /// Denotes a critical <see cref="PngChunk"/> that contains palette entries.
@@ -75,39 +50,39 @@ namespace MetadataExtractor.Formats.Png
         /// </list>
         /// The number of entries is determined by the chunk length. A chunk length indivisible by three is an error.
         /// </remarks>
-        public static readonly PngChunkType PLTE = new PngChunkType("PLTE");
+        public static readonly PngChunkType PLTE = new("PLTE");
 
-        public static readonly PngChunkType IDAT = new PngChunkType("IDAT", true);
+        public static readonly PngChunkType IDAT = new("IDAT", true);
 
-        public static readonly PngChunkType IEND = new PngChunkType("IEND");
+        public static readonly PngChunkType IEND = new("IEND");
 
         #endregion
 
         #region Standard ancillary chunks
 
-        public static readonly PngChunkType cHRM = new PngChunkType("cHRM");
+        public static readonly PngChunkType cHRM = new("cHRM");
 
-        public static readonly PngChunkType gAMA = new PngChunkType("gAMA");
+        public static readonly PngChunkType gAMA = new("gAMA");
 
-        public static readonly PngChunkType iCCP = new PngChunkType("iCCP");
+        public static readonly PngChunkType iCCP = new("iCCP");
 
-        public static readonly PngChunkType sBIT = new PngChunkType("sBIT");
+        public static readonly PngChunkType sBIT = new("sBIT");
 
-        public static readonly PngChunkType sRGB = new PngChunkType("sRGB");
+        public static readonly PngChunkType sRGB = new("sRGB");
 
-        public static readonly PngChunkType bKGD = new PngChunkType("bKGD");
+        public static readonly PngChunkType bKGD = new("bKGD");
 
-        public static readonly PngChunkType hIST = new PngChunkType("hIST");
+        public static readonly PngChunkType hIST = new("hIST");
 
-        public static readonly PngChunkType tRNS = new PngChunkType("tRNS");
+        public static readonly PngChunkType tRNS = new("tRNS");
 
-        public static readonly PngChunkType pHYs = new PngChunkType("pHYs");
+        public static readonly PngChunkType pHYs = new("pHYs");
 
-        public static readonly PngChunkType sPLT = new PngChunkType("sPLT", true);
+        public static readonly PngChunkType sPLT = new("sPLT", true);
 
-        public static readonly PngChunkType tIME = new PngChunkType("tIME");
+        public static readonly PngChunkType tIME = new("tIME");
 
-        public static readonly PngChunkType iTXt = new PngChunkType("iTXt", true);
+        public static readonly PngChunkType iTXt = new("iTXt", true);
 
         /// <summary>
         /// Denotes an ancillary <see cref="PngChunk"/> that contains textual data, having first a keyword and then a value.
@@ -124,11 +99,15 @@ namespace MetadataExtractor.Formats.Png
         /// Text is interpreted according to the Latin-1 character set [ISO-8859-1].
         /// Newlines should be represented by a single linefeed character (0x9).
         /// </remarks>
-        public static readonly PngChunkType tEXt = new PngChunkType("tEXt", true);
+        public static readonly PngChunkType tEXt = new("tEXt", true);
 
-        public static readonly PngChunkType zTXt = new PngChunkType("zTXt", true);
+        public static readonly PngChunkType zTXt = new("zTXt", true);
+
+        public static readonly PngChunkType eXIf = new("eXIf");
 
         #endregion
+
+#pragma warning restore IDE1006 // Naming Styles
 
         private readonly byte[] _bytes;
 
@@ -144,7 +123,7 @@ namespace MetadataExtractor.Formats.Png
         {
             ValidateBytes(bytes);
             _bytes = bytes;
-            AreMultipleAllowed = IdentifiersAllowingMultiples.Contains(Identifier);
+            AreMultipleAllowed = _identifiersAllowingMultiples.Contains(Identifier);
         }
 
         [SuppressMessage("ReSharper", "UnusedParameter.Local")]
@@ -173,7 +152,7 @@ namespace MetadataExtractor.Formats.Png
         private static bool IsUpperCase(byte b) => (b & (1 << 5)) == 0;
 
         [Pure]
-        private static bool IsValidByte(byte b) => (b >= 65 && b <= 90) || (b >= 97 && b <= 122);
+        private static bool IsValidByte(byte b) => b is >= 65 and <= 90 or >= 97 and <= 122;
 
         public string Identifier => Encoding.UTF8.GetString(_bytes, 0, _bytes.Length);
 
@@ -183,7 +162,7 @@ namespace MetadataExtractor.Formats.Png
 
         private bool Equals(PngChunkType other) => _bytes.SequenceEqual(other._bytes);
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is null)
                 return false;

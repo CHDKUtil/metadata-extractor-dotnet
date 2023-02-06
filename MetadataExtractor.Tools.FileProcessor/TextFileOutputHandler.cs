@@ -1,36 +1,7 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using JetBrains.Annotations;
 using MetadataExtractor.Formats.FileSystem;
 using MetadataExtractor.Formats.Xmp;
-using MetadataExtractor.Util;
 
 using XmpCore;
 using XmpCore.Impl;
@@ -43,12 +14,13 @@ namespace MetadataExtractor.Tools.FileProcessor
     /// </summary>
     internal class TextFileOutputHandler : FileHandlerBase
     {
-        private static readonly string NEW_LINE = "\n";
+        private const string NEW_LINE = "\n";
+        private const string Subdir = @"metadata\dotnet";
 
         public override void OnStartingDirectory(string directoryPath)
         {
             base.OnStartingDirectory(directoryPath);
-            System.IO.Directory.Delete(Path.Combine(directoryPath, @"metadata\dotnet"), recursive: true);
+            System.IO.Directory.Delete(Path.Combine(directoryPath, Subdir), recursive: true);
         }
 
         public override void OnBeforeExtraction(string filePath, string relativePath, TextWriter log)
@@ -112,7 +84,7 @@ namespace MetadataExtractor.Tools.FileProcessor
                                 var prop = (IXmpPropertyInfo)iterator.Next();
                                 var path = prop.Path;
 
-                                if (path == null)
+                                if (path is null)
                                     continue;
 
                                 var ns = prop.Namespace ?? "";
@@ -133,11 +105,11 @@ namespace MetadataExtractor.Tools.FileProcessor
 
                     void WriteLevel(Directory? parent, int level)
                     {
-                        const int indent = 4;
+                        const int Indent = 4;
 
                         foreach (var child in tree[parent])
                         {
-                            writer.Write(new string(' ', level * indent));
+                            writer.Write(new string(' ', level * Indent));
                             writer.Write($"- {child.Name}\n");
                             WriteLevel(child, level + 1);
                         }
@@ -181,9 +153,7 @@ namespace MetadataExtractor.Tools.FileProcessor
         {
             var directoryPath = Path.GetDirectoryName(filePath);
             Debug.Assert(directoryPath != null);
-            var metadataPath = Path.Combine(
-                Path.Combine(directoryPath, "metadata"),
-                "dotnet");
+            var metadataPath = Path.Combine(directoryPath, Subdir);
             var fileName = Path.GetFileName(filePath);
 
             // Create the output directory if it doesn't exist

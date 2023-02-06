@@ -1,28 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Diagnostics.CodeAnalysis;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -54,7 +30,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 SonyType1MakernoteDirectory.TagImageStabilisation => GetImageStabilizationDescription(),
                 //              case SonyType1MakernoteDirectory.TagLensId:
                 //                  // Unfortunately it seems that there is no definite mapping between a lens ID and a lens model
-                //                  // http://gvsoft.homedns.org/exif/makernote-sony-type1.html#0xb027
+                //                  // https://web.archive.org/web/20100406004008/http://gvsoft.homedns.org/exif/makernote-sony-type1.html#0xb027
                 //                  return getLensIDDescription();
                 SonyType1MakernoteDirectory.TagColorMode => GetColorModeDescription(),
                 SonyType1MakernoteDirectory.TagMacro => GetMacroDescription(),
@@ -511,6 +487,54 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 296 => "NEX-5R",
                 297 => "DSC-RX100",
                 298 => "DSC-RX1",
+                299 => "NEX - VG900",
+                300 => "NEX - VG30E",
+                302 => "ILCE - 3000 / ILCE - 3500",
+                303 => "SLT - A58",
+                305 => "NEX - 3N",
+                306 => "ILCE-7",
+                307 => "NEX-5T",
+                308 => "DSC-RX100M2",
+                309 => "DSC-RX10",
+                310 => "DSC-RX1R",
+                311 => "ILCE-7R",
+                312 => "ILCE-6000",
+                313 => "ILCE-5000",
+                317 => "DSC-RX100M3",
+                318 => "ILCE-7S",
+                319 => "ILCA-77M2",
+                339 => "ILCE-5100",
+                340 => "ILCE-7M2",
+                341 => "DSC-RX100M4",
+                342 => "DSC-RX10M2",
+                344 => "DSC-RX1RM2",
+                346 => "ILCE-QX1",
+                347 => "ILCE-7RM2",
+                350 => "ILCE-7SM2",
+                353 => "ILCA-68",
+                354 => "ILCA-99M2",
+                355 => "DSC-RX10M3",
+                356 => "DSC-RX100M5",
+                357 => "ILCE-6300",
+                358 => "ILCE-9",
+                360 => "ILCE-6500",
+                362 => "ILCE-7RM3",
+                363 => "ILCE-7M3",
+                364 => "DSC-RX0",
+                365 => "DSC-RX10M4",
+                366 => "DSC-RX100M6",
+                367 => "DSC-HX99",
+                369 => "DSC-RX100M5A",
+                371 => "ILCE-6400",
+                372 => "DSC-RX0M2",
+                374 => "DSC-RX100M7",
+                375 => "ILCE-7RM4",
+                376 => "ILCE-9M2",
+                378 => "ILCE-6600",
+                379 => "ILCE-6100",
+                380 => "ZV-1",
+                381 => "ILCE-7C",
+                383 => "ILCE-7SM3",
                 _ => "Unknown (" + value + ")",
             };
         }

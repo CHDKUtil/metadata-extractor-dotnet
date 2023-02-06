@@ -1,42 +1,13 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Text;
 using System.IO.Compression;
 
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Icc;
 using MetadataExtractor.Formats.FileSystem;
 using MetadataExtractor.Formats.Iptc;
+using MetadataExtractor.Formats.Tiff;
 using MetadataExtractor.Formats.Xmp;
-using MetadataExtractor.IO;
-using MetadataExtractor.Util;
 
 #if NET35
 using DirectoryList = System.Collections.Generic.IList<MetadataExtractor.Directory>;
@@ -49,7 +20,7 @@ namespace MetadataExtractor.Formats.Png
     /// <author>Drew Noakes https://drewnoakes.com</author>
     public static class PngMetadataReader
     {
-        private static readonly HashSet<PngChunkType> _desiredChunkTypes = new HashSet<PngChunkType>
+        private static readonly HashSet<PngChunkType> _desiredChunkTypes = new()
         {
             PngChunkType.IHDR,
             PngChunkType.PLTE,
@@ -64,11 +35,12 @@ namespace MetadataExtractor.Formats.Png
             PngChunkType.iTXt,
             PngChunkType.tIME,
             PngChunkType.pHYs,
-            PngChunkType.sBIT
+            PngChunkType.sBIT,
+            PngChunkType.eXIf
         };
 
         /// <exception cref="PngProcessingException"/>
-        /// <exception cref="System.IO.IOException"/>
+        /// <exception cref="IOException"/>
         public static DirectoryList ReadMetadata(string filePath)
         {
             var directories = new List<Directory>();
@@ -82,7 +54,7 @@ namespace MetadataExtractor.Formats.Png
         }
 
         /// <exception cref="PngProcessingException"/>
-        /// <exception cref="System.IO.IOException"/>
+        /// <exception cref="IOException"/>
         public static DirectoryList ReadMetadata(Stream stream)
         {
             List<Directory>? directories = null;
@@ -91,8 +63,7 @@ namespace MetadataExtractor.Formats.Png
 
             foreach (var chunk in chunks)
             {
-                if(directories == null)
-                    directories = new List<Directory>();
+                directories ??= new List<Directory>();
 
                 try
                 {
@@ -121,7 +92,7 @@ namespace MetadataExtractor.Formats.Png
         private static readonly Encoding _latin1Encoding = Encoding.GetEncoding("ISO-8859-1");
 
         /// <exception cref="PngProcessingException"/>
-        /// <exception cref="System.IO.IOException"/>
+        /// <exception cref="IOException"/>
         private static IEnumerable<Directory> ProcessChunk(PngChunk chunk)
         {
             var chunkType = chunk.ChunkType;
@@ -237,7 +208,7 @@ namespace MetadataExtractor.Formats.Png
                 var bytesLeft = bytes.Length - keyword.Length - 1;
                 var value = reader.GetNullTerminatedStringValue(bytesLeft, _latin1Encoding);
 
-                var textPairs = new List<KeyValuePair> { new KeyValuePair(keyword, value) };
+                var textPairs = new List<KeyValuePair> { new(keyword, value) };
                 var directory = new PngDirectory(PngChunkType.tEXt);
                 directory.Set(PngDirectory.TagTextualData, textPairs);
                 yield return directory;
@@ -270,7 +241,7 @@ namespace MetadataExtractor.Formats.Png
                 {
                     foreach (var directory in ProcessTextChunk(keyword, textBytes))
                     {
-                        yield return directory; 
+                        yield return directory;
                     }
                 }
             }
@@ -340,7 +311,9 @@ namespace MetadataExtractor.Formats.Png
                     directory.Set(PngDirectory.TagLastModificationTime, time);
                 }
                 else
+                {
                     directory.AddError($"PNG tIME data describes an invalid date/time: year={year} month={month} day={day} hour={hour} minute={minute} second={second}");
+                }
                 yield return directory;
             }
             else if (chunkType == PngChunkType.pHYs)
@@ -360,6 +333,27 @@ namespace MetadataExtractor.Formats.Png
                 var directory = new PngDirectory(PngChunkType.sBIT);
                 directory.Set(PngDirectory.TagSignificantBits, bytes);
                 yield return directory;
+            }
+            else if (chunkType.Equals(PngChunkType.eXIf))
+            {
+                var directories = new List<Directory>();
+                try
+                {
+                    TiffReader.ProcessTiff(
+                        new ByteArrayReader(bytes),
+                        new ExifTiffHandler(directories));
+                }
+                catch (Exception ex)
+                {
+                    var directory = new PngDirectory(PngChunkType.eXIf);
+                    directory.AddError(ex.Message);
+                    directories.Add(directory);
+                }
+
+                foreach (var directory in directories)
+                {
+                    yield return directory;
+                }
             }
 
             yield break;
@@ -385,7 +379,11 @@ namespace MetadataExtractor.Formats.Png
                 {
                     if (TryProcessRawProfile(out _))
                     {
-                        foreach (var exifDirectory in new ExifReader().Extract(new ByteArrayReader(textBytes)))
+                        int offset = 0;
+                        if (ExifReader.StartsWithJpegExifPreamble(textBytes))
+                            offset = ExifReader.JpegSegmentPreambleLength;
+
+                        foreach (var exifDirectory in new ExifReader().Extract(new ByteArrayReader(textBytes, offset)))
                             yield return exifDirectory;
                     }
                     else
@@ -408,7 +406,19 @@ namespace MetadataExtractor.Formats.Png
                 {
                     if (TryProcessRawProfile(out int byteCount))
                     {
-                        yield return new IptcReader().Extract(new SequentialByteArrayReader(textBytes), byteCount);
+                        // From ExifTool:
+                        // this is unfortunate, but the "IPTC" profile may be stored as either
+                        // IPTC IIM or a Photoshop IRB resource, so we must test for this.
+                        // Check if the first byte matches IptcReader.IptcMarkerByte (0x1c)
+                        if (byteCount > 0 && textBytes[0] == IptcReader.IptcMarkerByte)
+                        {
+                            yield return new IptcReader().Extract(new SequentialByteArrayReader(textBytes), byteCount);
+                        }
+                        else
+                        {
+                            foreach (var psDirectory in new Photoshop.PhotoshopReader().Extract(new SequentialByteArrayReader(textBytes), byteCount))
+                                yield return psDirectory;
+                        }
                     }
                     else
                     {
@@ -420,7 +430,7 @@ namespace MetadataExtractor.Formats.Png
                     yield return ReadTextDirectory(keyword, textBytes, chunkType);
                 }
 
-                PngDirectory ReadTextDirectory(string keyword, byte[] textBytes, PngChunkType pngChunkType)
+                static PngDirectory ReadTextDirectory(string keyword, byte[] textBytes, PngChunkType pngChunkType)
                 {
                     var textPairs = new[] { new KeyValuePair(keyword, new StringValue(textBytes, _latin1Encoding)) };
                     var directory = new PngDirectory(pngChunkType);
@@ -462,7 +472,7 @@ namespace MetadataExtractor.Formats.Png
                         if (c == '\n')
                             break;
 
-                        if (c >= '0' && c <= '9')
+                        if (c is >= '0' and <= '9')
                         {
                             length *= 10;
                             length += c - '0';
@@ -483,8 +493,8 @@ namespace MetadataExtractor.Formats.Png
                     // consumers may want the unmodified data.
 
                     // Each row must have 72 characters (36 bytes once decoded) separated by \n
-                    const int rowCharCount = 72;
-                    int charsInRow = rowCharCount;
+                    const int RowCharCount = 72;
+                    int charsInRow = RowCharCount;
 
                     for (int j = i; j < length + i; j++)
                     {
@@ -498,7 +508,7 @@ namespace MetadataExtractor.Formats.Png
                                 return false;
                             }
 
-                            charsInRow = rowCharCount;
+                            charsInRow = RowCharCount;
                             continue;
                         }
 
@@ -511,7 +521,7 @@ namespace MetadataExtractor.Formats.Png
 
                     byteCount = length;
                     var writeIndex = 0;
-                    charsInRow = rowCharCount;
+                    charsInRow = RowCharCount;
                     while (length > 0)
                     {
                         var c1 = textBytes[i++];
@@ -519,7 +529,7 @@ namespace MetadataExtractor.Formats.Png
                         if (charsInRow-- == 0)
                         {
                             Debug.Assert(c1 == '\n');
-                            charsInRow = rowCharCount;
+                            charsInRow = RowCharCount;
                             continue;
                         }
 
@@ -531,24 +541,24 @@ namespace MetadataExtractor.Formats.Png
                         var n2 = ParseHexNibble(c2);
 
                         length--;
-                        textBytes[writeIndex++] = (byte) ((n1 << 4) | n2);
+                        textBytes[writeIndex++] = (byte)((n1 << 4) | n2);
                     }
 
                     return writeIndex == byteCount;
 
                     static int ParseHexNibble(int h)
                     {
-                        if (h >= '0' && h <= '9')
+                        if (h is >= '0' and <= '9')
                         {
                             return h - '0';
                         }
 
-                        if (h >= 'a' && h <= 'f')
+                        if (h is >= 'a' and <= 'f')
                         {
                             return 10 + (h - 'a');
                         }
 
-                        if (h >= 'A' && h <= 'F')
+                        if (h is >= 'A' and <= 'F')
                         {
                             return 10 + (h - 'A');
                         }
@@ -564,7 +574,7 @@ namespace MetadataExtractor.Formats.Png
             byte[] bytes,
             int bytesLeft,
             [NotNullWhen(returnValue: true)] out byte[]? textBytes,
-            [NotNullWhen(returnValue: true)] out string? errorMessage)
+            [NotNullWhen(returnValue: false)] out string? errorMessage)
         {
             using var inflaterStream = new DeflateStream(new MemoryStream(bytes, bytes.Length - bytesLeft, bytesLeft), CompressionMode.Decompress);
             try

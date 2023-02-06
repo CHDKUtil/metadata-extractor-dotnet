@@ -1,32 +1,6 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
 
 namespace MetadataExtractor.Formats.Iptc
 {
@@ -114,7 +88,7 @@ namespace MetadataExtractor.Formats.Iptc
         public const int TagObjectPreviewFileFormatVersion = 0x02C9;
         public const int TagObjectPreviewData = 0x02CA;
 
-        private static readonly Dictionary<int, string> _tagNameMap = new Dictionary<int, string>
+        private static readonly Dictionary<int, string> _tagNameMap = new()
         {
             { TagEnvelopeRecordVersion, "Enveloped Record Version" },
             { TagDestination, "Destination" },
@@ -195,20 +169,15 @@ namespace MetadataExtractor.Formats.Iptc
             { TagObjectPreviewData, "Object Data Preview Data" }
         };
 
-        public IptcDirectory()
+        public IptcDirectory() : base(_tagNameMap)
         {
             SetDescriptor(new IptcDescriptor(this));
         }
 
         public override string Name => "IPTC";
 
-        protected override bool TryGetTagName(int tagType, out string tagName)
-        {
-            return _tagNameMap.TryGetValue(tagType, out tagName);
-        }
-
         /// <summary>Returns any keywords contained in the IPTC data.</summary>
-        /// <remarks>This value may be <c>null</c>.</remarks>
+        /// <remarks>This value may be <see langword="null" />.</remarks>
         public IList<string>? GetKeywords()
         {
             return this.GetStringArray(TagKeywords)?.ToList();
@@ -218,7 +187,7 @@ namespace MetadataExtractor.Formats.Iptc
         /// Combines tags <see cref="TagDateSent" /> and <see cref="TagTimeSent"/> to obtain a single
         /// <see cref="DateTimeOffset"/> representing when the service sent this image.
         /// </summary>
-        /// <returns>When the service sent this image, if possible, otherwise <c>null</c>.</returns>
+        /// <returns>When the service sent this image, if possible, otherwise <see langword="null" />.</returns>
         public DateTimeOffset? GetDateSent()
         {
             return GetDate(TagDateSent, TagTimeSent);
@@ -228,7 +197,7 @@ namespace MetadataExtractor.Formats.Iptc
         /// Combines tags <see cref="TagReleaseDate" /> and <see cref="TagReleaseTime"/> to obtain a single
         /// <see cref="DateTimeOffset"/> representing when this image was released.
         /// </summary>
-        /// <returns>When this image was released, if possible, otherwise <c>null</c>.</returns>
+        /// <returns>When this image was released, if possible, otherwise <see langword="null" />.</returns>
         public DateTimeOffset? GetReleaseDate()
         {
             return GetDate(TagReleaseDate, TagReleaseTime);
@@ -238,7 +207,7 @@ namespace MetadataExtractor.Formats.Iptc
         /// Combines tags <see cref="TagExpirationDate" /> and <see cref="TagExpirationTime"/> to obtain a single
         /// <see cref="DateTimeOffset"/> after which this image should not be used.
         /// </summary>
-        /// <returns>When this image should expire, if possible, otherwise <c>null</c>.</returns>
+        /// <returns>When this image should expire, if possible, otherwise <see langword="null" />.</returns>
         public DateTimeOffset? GetExpirationDate()
         {
             return GetDate(TagExpirationDate, TagExpirationTime);
@@ -248,7 +217,7 @@ namespace MetadataExtractor.Formats.Iptc
         /// Combines tags <see cref="TagDateCreated" /> and <see cref="TagTimeCreated"/> to obtain a single
         /// <see cref="DateTimeOffset"/> representing when this image was captured.
         /// </summary>
-        /// <returns>When this image was released, if possible, otherwise <c>null</c>.</returns>
+        /// <returns>When this image was released, if possible, otherwise <see langword="null" />.</returns>
         public DateTimeOffset? GetDateCreated()
         {
             return GetDate(TagDateCreated, TagTimeCreated);
@@ -258,23 +227,25 @@ namespace MetadataExtractor.Formats.Iptc
         /// Combines tags <see cref="TagDateCreated" /> and <see cref="TagTimeCreated"/> to obtain a single
         /// <see cref="DateTimeOffset"/> representing when the digital representation of this image was created.
         /// </summary>
-        /// <returns>When the digital representation of this image was created, if possible, otherwise <c>null</c>.</returns>
+        /// <returns>When the digital representation of this image was created, if possible, otherwise <see langword="null" />.</returns>
         public DateTimeOffset? GetDigitalDateCreated()
         {
             return GetDate(TagDigitalDateCreated, TagDigitalTimeCreated);
         }
 
-        private static readonly string[] _formats = { "yyyyMMddHHmmsszzz", "yyyyMMddHHmmss" };
+        private static readonly string[] _formats = { "yyyyMMddHHmmsszzzz", "yyyyMMddHHmmsszzz", "yyyyMMddHHmmss" };
 
         private DateTimeOffset? GetDate(int dateTagType, int timeTagType)
         {
             var date = this.GetString(dateTagType);
             var time = this.GetString(timeTagType);
 
-            if (date == null || time == null)
+            if (date is null || time is null)
                 return null;
 
-            if (DateTimeOffset.TryParseExact(date + time, _formats, null, DateTimeStyles.None, out DateTimeOffset result))
+            IFormatProvider provider = CultureInfo.InvariantCulture.DateTimeFormat;
+
+            if (DateTimeOffset.TryParseExact(date + time, _formats, provider, DateTimeStyles.None, out DateTimeOffset result))
                 return result;
 
             return null;

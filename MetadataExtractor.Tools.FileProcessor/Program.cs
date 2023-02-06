@@ -1,34 +1,7 @@
-﻿#region License
-//
-// Copyright 2002-2019 Drew Noakes
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+﻿// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
+using System.Globalization;
 using System.Reflection;
-using System.Text;
-using JetBrains.Annotations;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.FileSystem;
 using MetadataExtractor.Formats.Xmp;
@@ -47,6 +20,17 @@ namespace MetadataExtractor.Tools.FileProcessor
     {
         private static int Main(string[] args)
         {
+#if NETFRAMEWORK
+            System.Threading.Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            System.Threading.Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+#else
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+#endif
+#if !NET35
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+#endif
             return ProcessRecursively(args);
 //            return ProcessFileList(args);
         }
@@ -62,7 +46,7 @@ namespace MetadataExtractor.Tools.FileProcessor
         /// </remarks>
         /// <param name="argArray">the command line arguments</param>
         /// <exception cref="MetadataException"/>
-        /// <exception cref="System.IO.IOException"/>
+        /// <exception cref="IOException"/>
         private static int ProcessFileList(string[] argArray)
         {
             var args = argArray.ToList();
@@ -72,9 +56,9 @@ namespace MetadataExtractor.Tools.FileProcessor
 
             if (args.Count == 0)
             {
-                Console.Out.WriteLine("MetadataExtractor {0}", Assembly.GetEntryAssembly().GetName().Version);
+                Console.Out.WriteLine("MetadataExtractor {0}", Assembly.GetEntryAssembly()?.GetName().Version);
                 Console.Out.WriteLine();
-                Console.Out.WriteLine($"Usage: {Path.GetFileName(Process.GetCurrentProcess().MainModule.FileName)} <filename> [<filename> ...] [--markdown] [--hex]");
+                Console.Out.WriteLine($"Usage: {Path.GetFileName(Process.GetCurrentProcess().MainModule?.FileName)} <filename> [<filename> ...] [--markdown] [--hex]");
 
                 if (Debugger.IsAttached)
                     Console.ReadLine();
@@ -113,8 +97,8 @@ namespace MetadataExtractor.Tools.FileProcessor
                     var fileName = Path.GetFileName(filePath);
                     var urlName = Uri.EscapeDataString(filePath).Replace("%20", "+");
                     var exifIfd0Directory = directories.OfType<ExifIfd0Directory>().FirstOrDefault();
-                    var make = exifIfd0Directory == null ? string.Empty : exifIfd0Directory.GetString(ExifDirectoryBase.TagMake);
-                    var model = exifIfd0Directory == null ? string.Empty : exifIfd0Directory.GetString(ExifDirectoryBase.TagModel);
+                    var make = exifIfd0Directory is null ? string.Empty : exifIfd0Directory.GetString(ExifDirectoryBase.TagMake);
+                    var model = exifIfd0Directory is null ? string.Empty : exifIfd0Directory.GetString(ExifDirectoryBase.TagModel);
                     Console.Out.WriteLine();
                     Console.Out.WriteLine("---");
                     Console.Out.WriteLine();
@@ -140,8 +124,8 @@ namespace MetadataExtractor.Tools.FileProcessor
                             description = tag.Description;
 
                             // truncate the description if it's too long
-                            if (description != null && description.Length > 1024)
-                                description = description.Substring(0, 1024 - 0) + "...";
+                            if (description is { Length: > 1024 })
+                                description = description[..1024] + "...";
                         }
                         catch (Exception e)
                         {
@@ -160,7 +144,7 @@ namespace MetadataExtractor.Tools.FileProcessor
                             description);
                     }
 
-                    if (directory is XmpDirectory xmpDirectory && xmpDirectory.XmpMeta != null)
+                    if (directory is XmpDirectory { XmpMeta: { } } xmpDirectory)
                     {
                         foreach (var property in xmpDirectory.XmpMeta.Properties)
                         {
@@ -240,7 +224,7 @@ namespace MetadataExtractor.Tools.FileProcessor
                 return 1;
             }
 
-            if (fileHandler == null)
+            if (fileHandler is null)
                 fileHandler = new BasicFileHandler();
 
             var stopwatch = Stopwatch.StartNew();
@@ -266,7 +250,7 @@ namespace MetadataExtractor.Tools.FileProcessor
             Console.Out.WriteLine("Usage:");
             Console.Out.WriteLine();
             Console.Out.WriteLine("  {0}.exe [--text|--markdown|--unknown] [--log-file <file-name>]",
-                Assembly.GetEntryAssembly().GetName().Name);
+                Assembly.GetEntryAssembly()?.GetName().Name);
         }
 
         private static void ProcessDirectory(string path, IFileHandler handler, string relativePath, TextWriter log)

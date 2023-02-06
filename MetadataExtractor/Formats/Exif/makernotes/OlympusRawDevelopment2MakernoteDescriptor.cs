@@ -1,29 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -90,11 +65,17 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             var sb = new StringBuilder();
             var v = (ushort)value;
 
+#pragma warning disable format
             if ((v        & 1) != 0) sb.Append("Noise Reduction, ");
             if (((v >> 1) & 1) != 0) sb.Append("Noise Filter, ");
             if (((v >> 2) & 1) != 0) sb.Append("Noise Filter (ISO Boost), ");
+            if (((v >> 3) & 1) != 0) sb.Append("Noise Filter (Auto), ");
+#pragma warning restore format
 
-            return sb.ToString(0, sb.Length - 2);
+            if (sb.Length > 2)
+                sb.Length -= 2;
+
+            return sb.ToString();
         }
 
         public string? GetRawDevEngineDescription()
@@ -135,7 +116,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         private string? GetFilterDescription(int tagId)
         {
-            if (!(Directory.GetObject(tagId) is short[] values) || values.Length == 0)
+            if (Directory.GetObject(tagId) is not short[] values || values.Length == 0)
                 return null;
 
             var sb = new StringBuilder();
@@ -152,7 +133,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         }
 
         // RawDevArtFilter values
-        private static readonly Dictionary<int, string> _filters = new Dictionary<int, string>
+        private static readonly Dictionary<int, string> _filters = new()
         {
             { 0, "Off" },
             { 1, "Soft Focus" },

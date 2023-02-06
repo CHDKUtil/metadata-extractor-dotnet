@@ -1,32 +1,4 @@
-﻿#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Text;
-using MetadataExtractor.IO;
+﻿// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Icc
 {
@@ -56,7 +28,7 @@ namespace MetadataExtractor.Formats.Icc
                     return GetProfileDateTimeDescription();
             }
 
-            if (tagType > 0x20202020 && tagType < 0x7a7a7a7a)
+            if (tagType is > 0x20202020 and < 0x7a7a7a7a)
                 return GetTagDataString(tagType);
 
             return base.GetDescription(tagType);
@@ -78,7 +50,7 @@ namespace MetadataExtractor.Formats.Icc
             try
             {
                 var bytes = Directory.GetByteArray(tagType);
-                if (bytes == null)
+                if (bytes is null)
                     return Directory.GetString(tagType);
 
                 var reader = new ByteArrayReader(bytes);
@@ -121,34 +93,34 @@ namespace MetadataExtractor.Formats.Icc
                         var geometryType = reader.GetInt32(24);
                         var flare = reader.GetS15Fixed16(28);
                         var illuminantType = reader.GetInt32(32);
-                            var observerString = observerType switch
-                            {
-                                0 => "Unknown",
-                                1 => "1931 2\u00b0",
-                                2 => "1964 10\u00b0",
-                                _ => $"Unknown ({observerType})",
-                            };
-                            var geometryString = geometryType switch
-                            {
-                                0 => "Unknown",
-                                1 => "0/45 or 45/0",
-                                2 => "0/d or d/0",
-                                _ => $"Unknown ({observerType})",
-                            };
-                            var illuminantString = illuminantType switch
-                            {
-                                0 => "unknown",
-                                1 => "D50",
-                                2 => "D65",
-                                3 => "D93",
-                                4 => "F2",
-                                5 => "D55",
-                                6 => "A",
-                                7 => "Equi-Power (E)",
-                                8 => "F8",
-                                _ => $"Unknown ({illuminantType})",
-                            };
-                            return $"{observerString} Observer, Backing ({x:0.###}, {y:0.###}, {z:0.###}), Geometry {geometryString}, Flare {(long)Math.Round(flare*100)}%, Illuminant {illuminantString}";
+                        var observerString = observerType switch
+                        {
+                            0 => "Unknown",
+                            1 => "1931 2\u00b0",
+                            2 => "1964 10\u00b0",
+                            _ => $"Unknown ({observerType})",
+                        };
+                        var geometryString = geometryType switch
+                        {
+                            0 => "Unknown",
+                            1 => "0/45 or 45/0",
+                            2 => "0/d or d/0",
+                            _ => $"Unknown ({observerType})",
+                        };
+                        var illuminantString = illuminantType switch
+                        {
+                            0 => "unknown",
+                            1 => "D50",
+                            2 => "D65",
+                            3 => "D93",
+                            4 => "F2",
+                            5 => "D55",
+                            6 => "A",
+                            7 => "Equi-Power (E)",
+                            8 => "F8",
+                            _ => $"Unknown ({illuminantType})",
+                        };
+                        return $"{observerString} Observer, Backing ({x:0.###}, {y:0.###}, {z:0.###}), Geometry {geometryString}, Flare {(long)Math.Round(flare * 100)}%, Illuminant {illuminantString}";
                     }
 
                     case IccTagType.XyzArray:
@@ -188,7 +160,7 @@ namespace MetadataExtractor.Formats.Icc
                             {
                                 name = Encoding.UTF8.GetString(bytes, ofs, len);
                             }
-                            res.Append(" ").Append(str).Append("(").Append(name).Append(")");
+                            res.Append(' ').Append(str).Append('(').Append(name).Append(')');
                         }
                         return res.ToString();
                     }
@@ -255,7 +227,7 @@ namespace MetadataExtractor.Formats.Icc
         private string? GetPlatformDescription()
         {
             var str = Directory.GetString(IccDirectory.TagPlatform);
-            if (str == null)
+            if (str is null)
                 return null;
 
             return str switch
@@ -273,7 +245,7 @@ namespace MetadataExtractor.Formats.Icc
         {
             var str = Directory.GetString(IccDirectory.TagProfileClass);
 
-            if (str == null)
+            if (str is null)
                 return null;
 
             return str switch

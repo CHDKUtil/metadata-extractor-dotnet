@@ -1,33 +1,7 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Text;
 using JetBrains.Annotations;
-using MetadataExtractor.Util;
 
 namespace MetadataExtractor
 {
@@ -40,7 +14,7 @@ namespace MetadataExtractor
     public class TagDescriptor<T> : ITagDescriptor
         where T : Directory
     {
-        protected readonly T Directory;
+        protected T Directory { get; }
 
         public TagDescriptor(T directory)
         {
@@ -56,16 +30,16 @@ namespace MetadataExtractor
         /// <param name="tagType">the tag to find a description for</param>
         /// <returns>
         /// a description of the image's value for the specified tag, or
-        /// <c>null</c> if the tag hasn't been defined.
+        /// <see langword="null" /> if the tag hasn't been defined.
         /// </returns>
         public virtual string? GetDescription(int tagType)
         {
             var obj = Directory.GetObject(tagType);
-            if (obj == null)
+            if (obj is null)
                 return null;
 
             // special presentation for long arrays
-            if (obj is ICollection collection && collection.Count > 16)
+            if (obj is ICollection { Count: > 16 } collection)
                 return $"[{collection.Count} values]";
 
             // no special handling required, so use default conversion to a string
@@ -89,7 +63,7 @@ namespace MetadataExtractor
         [Pure]
         public static string? ConvertBytesToVersionString(int[]? components, int majorDigits)
         {
-            if (components == null)
+            if (components is null)
                 return null;
 
             var version = new StringBuilder();
@@ -116,7 +90,7 @@ namespace MetadataExtractor
         protected string? GetVersionBytesDescription(int tagType, int majorDigits)
         {
             var values = Directory.GetInt32Array(tagType);
-            return values == null ? null : ConvertBytesToVersionString(values, majorDigits);
+            return values is null ? null : ConvertBytesToVersionString(values, majorDigits);
         }
 
         [Pure]
@@ -144,10 +118,21 @@ namespace MetadataExtractor
         }
 
         [Pure]
+        protected string? GetBooleanDescription(int tagType, string trueValue, string falseValue)
+        {
+            if (!Directory.TryGetBoolean(tagType, out var value))
+                return null;
+
+            return value
+                ? trueValue
+                : falseValue;
+        }
+
+        [Pure]
         protected string? GetByteLengthDescription(int tagType)
         {
             var bytes = Directory.GetByteArray(tagType);
-            if (bytes == null)
+            if (bytes is null)
                 return null;
             return $"({bytes.Length} byte{(bytes.Length == 1 ? string.Empty : "s")})";
         }
@@ -180,7 +165,7 @@ namespace MetadataExtractor
         protected string? GetFormattedString(int tagType, string format)
         {
             var value = Directory.GetString(tagType);
-            if (value == null)
+            if (value is null)
                 return null;
             return string.Format(format, value);
         }
@@ -208,7 +193,7 @@ namespace MetadataExtractor
                 if (labelObj != null)
                 {
                     var isBitSet = (value & 1) == 1;
-                    if (labelObj is string[] labelPair && labelPair.Length == 2)
+                    if (labelObj is string[] { Length: 2 } labelPair)
                     {
                         parts.Add(labelPair[isBitSet ? 1 : 0]);
                     }
@@ -231,7 +216,7 @@ namespace MetadataExtractor
         protected string? GetStringFrom7BitBytes(int tagType)
         {
             var bytes = Directory.GetByteArray(tagType);
-            if (bytes == null)
+            if (bytes is null)
                 return null;
             var length = bytes.Length;
             for (var index = 0; index < bytes.Length; index++)
@@ -250,7 +235,7 @@ namespace MetadataExtractor
         protected string? GetStringFromUtf8Bytes(int tag)
         {
             var values = Directory.GetByteArray(tag);
-            if (values == null)
+            if (values is null)
                 return null;
 
             try
@@ -288,7 +273,7 @@ namespace MetadataExtractor
         {
             var values = Directory.GetRationalArray(tagId);
 
-            if (values == null || values.Length != 4 || values[0].IsZero && values[2].IsZero)
+            if (values is null || values.Length != 4 || values[0].IsZero && values[2].IsZero)
                 return null;
 
             var sb = new StringBuilder();
@@ -296,7 +281,7 @@ namespace MetadataExtractor
             if (values[0] == values[1])
                 sb.Append(values[0].ToSimpleString()).Append("mm");
             else
-                sb.Append(values[0].ToSimpleString()).Append("-").Append(values[1].ToSimpleString()).Append("mm");
+                sb.Append(values[0].ToSimpleString()).Append('-').Append(values[1].ToSimpleString()).Append("mm");
 
             if (!values[2].IsZero)
             {
@@ -311,7 +296,7 @@ namespace MetadataExtractor
 #else
                       .Append(Math.Round(values[2].ToDouble(), 1).ToString("0.0"))
 #endif
-                      .Append("-")
+                      .Append('-')
 #if !NETSTANDARD1_3
                       .Append(Math.Round(values[3].ToDouble(), 1, MidpointRounding.AwayFromZero).ToString("0.0"));
 #else
@@ -366,7 +351,7 @@ namespace MetadataExtractor
         {
             var commentBytes = Directory.GetByteArray(tagType);
 
-            if (commentBytes == null)
+            if (commentBytes is null)
                 return null;
 
             if (commentBytes.Length == 0)
@@ -378,9 +363,11 @@ namespace MetadataExtractor
             {
                 ["ASCII"] = Encoding.ASCII,
                 ["UTF8"] = Encoding.UTF8,
+#pragma warning disable SYSLIB0001 // Type or member is obsolete
                 ["UTF7"] = Encoding.UTF7,
+#pragma warning restore SYSLIB0001 // Type or member is obsolete
                 ["UTF32"] = Encoding.UTF32,
-                ["UNICODE"] = Encoding.Unicode
+                ["UNICODE"] = Encoding.BigEndianUnicode,
             };
 
             try
@@ -394,30 +381,19 @@ namespace MetadataExtractor
 
             try
             {
-                if (commentBytes.Length >= 10)
+                if (commentBytes.Length >= 8)
                 {
                     // TODO no guarantee bytes after the UTF8 name are valid UTF8 -- only read as many as needed
-                    var firstTenBytesString = Encoding.UTF8.GetString(commentBytes, 0, 10);
-                    // try each encoding name
-                    foreach (var pair in encodingMap)
+                    var idCode = Encoding.UTF8.GetString(commentBytes, 0, 8).TrimEnd('\0', ' ');
+                    if (encodingMap.TryGetValue(idCode, out var encoding))
                     {
-                        var encodingName = pair.Key;
-                        var encoding = pair.Value;
-                        if (firstTenBytesString.StartsWith(encodingName))
-                        {
-                            // skip any null or blank characters commonly present after the encoding name, up to a limit of 10 from the start
-                            for (var j = encodingName.Length; j < 10; j++)
-                            {
-                                var b = commentBytes[j];
-                                if (b != '\0' && b != ' ')
-                                {
-                                    return encoding.GetString(commentBytes, j, commentBytes.Length - j).Trim('\0', ' ');
-                                }
-                            }
-                            return encoding.GetString(commentBytes, 10, commentBytes.Length - 10).Trim('\0', ' ');
-                        }
+                        var text = encoding.GetString(commentBytes, 8, commentBytes.Length - 8);
+                        if (encoding == Encoding.ASCII)
+                            text = text.Trim('\0', ' ');
+                        return text;
                     }
                 }
+
                 // special handling fell through, return a plain string representation
                 return Encoding.UTF8.GetString(commentBytes, 0, commentBytes.Length).Trim('\0', ' ');
             }

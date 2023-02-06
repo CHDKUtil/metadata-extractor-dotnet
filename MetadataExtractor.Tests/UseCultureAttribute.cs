@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+
 using System.Globalization;
 using System.Reflection;
 using Xunit.Sdk;
@@ -34,7 +35,7 @@ namespace MetadataExtractor.Tests
         /// </remarks>
         public UseCultureAttribute(string culture)
             : this(culture, culture)
-        {}
+        { }
 
         /// <summary>
         /// Replaces the culture and UI culture of the current thread with
@@ -68,13 +69,8 @@ namespace MetadataExtractor.Tests
             _originalCulture = CultureInfo.CurrentCulture;
             _originalUiCulture = CultureInfo.CurrentUICulture;
 
-#if NETCOREAPP1_0
-            CultureInfo.CurrentCulture = Culture;
-            CultureInfo.CurrentUICulture = Culture;
-#else
             System.Threading.Thread.CurrentThread.CurrentCulture = Culture;
             System.Threading.Thread.CurrentThread.CurrentUICulture = Culture;
-#endif
         }
 
         /// <summary>
@@ -84,13 +80,10 @@ namespace MetadataExtractor.Tests
         /// <param name="methodUnderTest">The method under test</param>
         public override void After(MethodInfo methodUnderTest)
         {
-#if NETCOREAPP1_0
-            CultureInfo.CurrentCulture = _originalCulture;
-            CultureInfo.CurrentUICulture = _originalUiCulture;
-#else
+            Assert.NotNull(_originalCulture);
+            Assert.NotNull(_originalUiCulture);
             System.Threading.Thread.CurrentThread.CurrentCulture = _originalCulture;
             System.Threading.Thread.CurrentThread.CurrentUICulture = _originalUiCulture;
-#endif
         }
     }
 }

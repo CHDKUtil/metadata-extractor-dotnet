@@ -1,28 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Text;
-using System.Diagnostics.CodeAnalysis;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -86,9 +62,11 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             var sb = new StringBuilder();
             var v = (ushort)value;
 
-            if ((v        & 1) != 0) sb.Append("Noise Reduction, ");
+#pragma warning disable format
+            if ((v & 1) != 0) sb.Append("Noise Reduction, ");
             if (((v >> 1) & 1) != 0) sb.Append("Noise Filter, ");
             if (((v >> 2) & 1) != 0) sb.Append("Noise Filter (ISO Boost), ");
+#pragma warning restore format
 
             return sb.ToString(0, sb.Length - 2);
         }
@@ -123,7 +101,8 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             var sb = new StringBuilder();
             var v = (ushort)value;
 
-            if ((v        & 1) != 0) sb.Append("WB Color Temp, ");
+#pragma warning disable format
+            if ((v & 1) != 0) sb.Append("WB Color Temp, ");
             if (((v >> 1) & 1) != 0) sb.Append("WB Gray Point, ");
             if (((v >> 2) & 1) != 0) sb.Append("Saturation, ");
             if (((v >> 3) & 1) != 0) sb.Append("Contrast, ");
@@ -131,6 +110,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
             if (((v >> 5) & 1) != 0) sb.Append("Color Space, ");
             if (((v >> 6) & 1) != 0) sb.Append("High Function, ");
             if (((v >> 7) & 1) != 0) sb.Append("Noise Reduction, ");
+#pragma warning restore format
 
             return sb.ToString(0, sb.Length - 2);
         }

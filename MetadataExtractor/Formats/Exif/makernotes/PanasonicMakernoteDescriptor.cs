@@ -1,33 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
-using MetadataExtractor.IO;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif.Makernotes
 {
@@ -119,7 +90,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 PanasonicMakernoteDirectory.TagPitchAngle => GetPitchAngleDescription(),
                 PanasonicMakernoteDirectory.TagSweepPanoramaDirection => GetSweepPanoramaDirectionDescription(),
                 PanasonicMakernoteDirectory.TagTimerRecording => GetTimerRecordingDescription(),
-                PanasonicMakernoteDirectory.TagHDR => GetHDRDescription(),
+                PanasonicMakernoteDirectory.TagHdr => GetHdrDescription(),
                 PanasonicMakernoteDirectory.TagShutterType => GetShutterTypeDescription(),
                 PanasonicMakernoteDirectory.TagTouchAe => GetTouchAeDescription(),
 
@@ -198,7 +169,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         private string? GetTransformDescription(int tag)
         {
             var values = Directory.GetByteArray(tag);
-            if (values == null)
+            if (values is null)
                 return null;
 
             IndexedReader reader = new ByteArrayReader(values);
@@ -286,7 +257,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         {
             // lens version has 4 parts separated by periods
             var bytes = Directory.GetByteArray(PanasonicMakernoteDirectory.TagLensFirmwareVersion);
-            if (bytes == null)
+            if (bytes is null)
                 return null;
 
             return string.Join(".", bytes.Select(b => b.ToString()).ToArray());
@@ -356,7 +327,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 return null;
 
             // converted to degrees of clockwise camera rotation
-            return ((short)value/10.0).ToString();
+            return ((short)value / 10.0).ToString();
         }
 
         public string? GetPitchAngleDescription()
@@ -365,7 +336,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                 return null;
 
             // converted to degrees of upward camera tilt
-            return (-(short)value/10.0).ToString();
+            return (-(short)value / 10.0).ToString();
         }
 
         public string? GetSweepPanoramaDirectionDescription()
@@ -380,9 +351,9 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
                     "Off", "Time Lapse", "Stop-motion Animation");
         }
 
-        public string? GetHDRDescription()
+        public string? GetHdrDescription()
         {
-            if (!Directory.TryGetUInt16(PanasonicMakernoteDirectory.TagHDR, out ushort value))
+            if (!Directory.TryGetUInt16(PanasonicMakernoteDirectory.TagHdr, out ushort value))
                 return null;
 
             return value switch
@@ -558,7 +529,7 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
 
         private static string? BuildFacesDescription(IEnumerable<Face>? faces)
         {
-            if (faces == null)
+            if (faces is null)
                 return null;
 
             var description = string.Join(Environment.NewLine,
@@ -597,49 +568,49 @@ namespace MetadataExtractor.Formats.Exif.Makernotes
         public string? GetAfAreaModeDescription()
         {
             var value = Directory.GetInt32Array(PanasonicMakernoteDirectory.TagAfAreaMode);
-            if (value == null || value.Length < 2)
+            if (value is null || value.Length < 2)
                 return null;
 
             switch (value[0])
             {
                 case 0:
                 {
-                        return (value[1]) switch
-                        {
-                            1 => "Spot Mode On",
-                            16 => "Spot Mode Off",
-                            _ => "Unknown (" + value[0] + " " + value[1] + ")",
-                        };
-                    }
+                    return (value[1]) switch
+                    {
+                        1 => "Spot Mode On",
+                        16 => "Spot Mode Off",
+                        _ => "Unknown (" + value[0] + " " + value[1] + ")",
+                    };
+                }
                 case 1:
                 {
-                        return (value[1]) switch
-                        {
-                            0 => "Spot Focusing",
-                            1 => "5-area",
-                            _ => "Unknown (" + value[0] + " " + value[1] + ")",
-                        };
-                    }
+                    return (value[1]) switch
+                    {
+                        0 => "Spot Focusing",
+                        1 => "5-area",
+                        _ => "Unknown (" + value[0] + " " + value[1] + ")",
+                    };
+                }
                 case 16:
                 {
-                        return (value[1]) switch
-                        {
-                            0 => "1-area",
-                            16 => "1-area (high speed)",
-                            _ => "Unknown (" + value[0] + " " + value[1] + ")",
-                        };
-                    }
+                    return (value[1]) switch
+                    {
+                        0 => "1-area",
+                        16 => "1-area (high speed)",
+                        _ => "Unknown (" + value[0] + " " + value[1] + ")",
+                    };
+                }
                 case 32:
                 {
-                        return (value[1]) switch
-                        {
-                            0 => "Auto or Face Detect",
-                            1 => "3-area (left)",
-                            2 => "3-area (center)",
-                            3 => "3-area (right)",
-                            _ => "Unknown (" + value[0] + " " + value[1] + ")",
-                        };
-                    }
+                    return (value[1]) switch
+                    {
+                        0 => "Auto or Face Detect",
+                        1 => "3-area (left)",
+                        2 => "3-area (center)",
+                        3 => "3-area (right)",
+                        _ => "Unknown (" + value[0] + " " + value[1] + ")",
+                    };
+                }
                 case 64:
                     return "Face Detect";
                 default:

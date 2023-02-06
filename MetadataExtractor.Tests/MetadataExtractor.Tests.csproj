@@ -1,7 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1;net472</TargetFrameworks>
+    <TargetFrameworks>net6.0;net472</TargetFrameworks>
+
+    <RestoreAdditionalProjectSources>
+      $(RestoreAdditionalProjectSources);
+      https://www.myget.org/F/xunit/api/v3/index.json
+    </RestoreAdditionalProjectSources>
   </PropertyGroup>
 
   <ItemGroup>
@@ -9,11 +14,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.1.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
     <PackageReference Include="System.Runtime.Serialization.Primitives" Version="4.3.0" />
-    <PackageReference Include="xunit" Version="2.4.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.1">
-      <PrivateAssets>all</PrivateAssets>
+    <PackageReference Include="xunit" Version="2.4.2" PrivateAssets="all" />
+    <PackageReference Include="xunit.analyzers" Version="1.1.0" PrivateAssets="all" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" PrivateAssets="all">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
@@ -23,7 +28,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Annotations.cs" Link="Annotations.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit"/>
   </ItemGroup>
 
 </Project>

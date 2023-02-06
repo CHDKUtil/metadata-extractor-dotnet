@@ -1,29 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System;
-using System.Diagnostics.CodeAnalysis;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Exif
 {
@@ -104,56 +79,52 @@ namespace MetadataExtractor.Formats.Exif
         public string? GetGpsLatitudeDescription()
         {
             var location = Directory.GetGeoLocation();
-            return location == null ? null : GeoLocation.DecimalToDegreesMinutesSecondsString(location.Latitude);
+            return location is null ? null : GeoLocation.DecimalToDegreesMinutesSecondsString(location.Latitude);
         }
 
         public string? GetGpsLongitudeDescription()
         {
             var location = Directory.GetGeoLocation();
-            return location == null ? null : GeoLocation.DecimalToDegreesMinutesSecondsString(location.Longitude);
+            return location is null ? null : GeoLocation.DecimalToDegreesMinutesSecondsString(location.Longitude);
         }
 
         public string? GetGpsTimeStampDescription()
         {
             // time in hour, min, sec
             var timeComponents = Directory.GetRationalArray(GpsDirectory.TagTimeStamp);
-            return timeComponents == null
+            return timeComponents is null
                 ? null
                 : $"{timeComponents[0].ToInt32():D2}:{timeComponents[1].ToInt32():D2}:{timeComponents[2].ToDouble():00.000} UTC";
         }
 
         public string? GetGpsDestLatitudeDescription()
         {
-            var latitudes = Directory.GetRationalArray(GpsDirectory.TagDestLatitude);
-            var latitudeRef = Directory.GetString(GpsDirectory.TagDestLatitudeRef);
-
-            if (latitudes == null || latitudes.Length != 3 || latitudeRef == null)
-                return null;
-
-            var lat = GeoLocation.DegreesMinutesSecondsToDecimal(
-                latitudes[0], latitudes[1], latitudes[2], latitudeRef.Equals("S", StringComparison.OrdinalIgnoreCase));
-
-            return lat == null ? null : GeoLocation.DecimalToDegreesMinutesSecondsString((double)lat);
+            return GetGeoLocationDimension(GpsDirectory.TagDestLatitude, GpsDirectory.TagDestLatitudeRef, "S");
         }
 
         public string? GetGpsDestLongitudeDescription()
         {
-            var longitudes = Directory.GetRationalArray(GpsDirectory.TagDestLongitude);
-            var longitudeRef = Directory.GetString(GpsDirectory.TagDestLongitudeRef);
+            return GetGeoLocationDimension(GpsDirectory.TagDestLongitude, GpsDirectory.TagDestLongitudeRef, "W");
+        }
 
-            if (longitudes == null || longitudes.Length != 3 || longitudeRef == null)
+        private string? GetGeoLocationDimension(int tagValue, int tagRef, string positiveRef)
+        {
+            var values = Directory.GetRationalArray(tagValue);
+            var @ref = Directory.GetString(tagRef);
+
+            if (values is null || values.Length != 3 || @ref is null)
                 return null;
 
-            var lon = GeoLocation.DegreesMinutesSecondsToDecimal(
-                longitudes[0], longitudes[1], longitudes[2], longitudeRef.Equals("S", StringComparison.OrdinalIgnoreCase));
+            var dec = GeoLocation.DegreesMinutesSecondsToDecimal(
+                values[0], values[1], values[2], @ref.Equals(positiveRef, StringComparison.OrdinalIgnoreCase));
 
-            return lon == null ? null : GeoLocation.DecimalToDegreesMinutesSecondsString((double)lon);
+            return dec == null ? null : GeoLocation.DecimalToDegreesMinutesSecondsString((double)dec);
         }
 
         public string? GetGpsDestinationReferenceDescription()
         {
             var value = Directory.GetString(GpsDirectory.TagDestDistanceRef);
-            if (value == null)
+            if (value is null)
                 return null;
 
             return (value.Trim().ToUpper()) switch
@@ -172,7 +143,7 @@ namespace MetadataExtractor.Formats.Exif
                 return null;
 
             var unit = GetGpsDestinationReferenceDescription();
-            return string.Format("{0} {1}", value.ToDouble().ToString("0.##"), unit == null ? "unit" : unit.ToLower());
+            return string.Format("{0} {1}", value.ToDouble().ToString("0.##"), unit is null ? "unit" : unit.ToLower());
         }
 
         public string? GetGpsDirectionDescription(int tagType)
@@ -186,7 +157,7 @@ namespace MetadataExtractor.Formats.Exif
         public string? GetGpsDirectionReferenceDescription(int tagType)
         {
             var value = Directory.GetString(tagType);
-            if (value == null)
+            if (value is null)
                 return null;
 
             return (value.Trim().ToUpper()) switch
@@ -208,7 +179,7 @@ namespace MetadataExtractor.Formats.Exif
         public string? GetGpsSpeedRefDescription()
         {
             var value = Directory.GetString(GpsDirectory.TagSpeedRef);
-            if (value == null)
+            if (value is null)
                 return null;
 
             return (value.Trim().ToUpper()) switch
@@ -227,13 +198,13 @@ namespace MetadataExtractor.Formats.Exif
                 return null;
 
             var unit = GetGpsSpeedRefDescription();
-            return string.Format("{0} {1}", value.ToDouble().ToString("0.##"), unit == null ? "unit" : unit.ToLower());
+            return string.Format("{0} {1}", value.ToDouble().ToString("0.##"), unit is null ? "unit" : unit.ToLower());
         }
 
         public string? GetGpsMeasureModeDescription()
         {
             var value = Directory.GetString(GpsDirectory.TagMeasureMode);
-            if (value == null)
+            if (value is null)
                 return null;
 
             return (value.Trim()) switch
@@ -248,7 +219,7 @@ namespace MetadataExtractor.Formats.Exif
         public string? GetGpsStatusDescription()
         {
             var value = Directory.GetString(GpsDirectory.TagStatus);
-            if (value == null)
+            if (value is null)
                 return null;
 
             return (value.Trim().ToUpper()) switch

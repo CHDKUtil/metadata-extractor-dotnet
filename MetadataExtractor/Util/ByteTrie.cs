@@ -1,32 +1,6 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 
 namespace MetadataExtractor.Util
 {
@@ -50,33 +24,46 @@ namespace MetadataExtractor.Util
             }
         }
 
-        private readonly ByteTrieNode _root = new ByteTrieNode();
+        private readonly ByteTrieNode _root = new();
 
         /// <summary>Gets the maximum depth stored in this trie.</summary>
         public int MaxDepth { get; private set; }
 
-        public ByteTrie() {}
-
-        public ByteTrie(T defaultValue) => SetDefaultValue(defaultValue);
+        /// <summary>
+        /// Initialises a new instance of <see cref="ByteTrie{T}"/> with specified default value.
+        /// </summary>
+        /// <param name="defaultValue">
+        /// The default value to use in <see cref="ByteTrie{T}.Find(byte[])"/> when no path matches.
+        /// </param>
+        public ByteTrie(T defaultValue) => _root.SetValue(defaultValue);
 
         /// <summary>Return the most specific value stored for this byte sequence.</summary>
         /// <remarks>
-        /// If not found, returns <c>null</c> or a default values as specified by
-        /// calling <see cref="SetDefaultValue"/>.
+        /// If not found, returns the default value specified in the constructor.
         /// </remarks>
-        [return: MaybeNull]
-        [SuppressMessage("ReSharper", "ParameterTypeCanBeEnumerable.Global")]
-        public T Find(byte[] bytes)
+        public T Find(byte[] bytes) => Find(bytes, 0, bytes.Length);
+
+        /// <summary>Return the most specific value stored for this byte sequence.</summary>
+        /// <remarks>
+        /// If not found, returns the default value specified in the constructor.
+        /// </remarks>
+        public T Find(byte[] bytes, int offset, int count)
         {
+            var maxIndex = offset + count;
+            if (maxIndex > bytes.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset), "Offset and length are not in bounds for byte array.");
+
             var node = _root;
             var value = node.Value;
-            foreach (var b in bytes)
+            for (var i = offset; i < maxIndex; i++)
             {
+                var b = bytes[i];
                 if (!node.Children.TryGetValue(b, out node))
                     break;
                 if (node.HasValue)
                     value = node.Value;
             }
+
             return value;
         }
 
@@ -89,7 +76,7 @@ namespace MetadataExtractor.Util
             {
                 foreach (var b in part)
                 {
-                    if (!node.Children.TryGetValue(b, out ByteTrieNode child))
+                    if (!node.Children.TryGetValue(b, out ByteTrieNode? child))
                     {
                         child = new ByteTrieNode();
                         node.Children[b] = child;
@@ -102,13 +89,8 @@ namespace MetadataExtractor.Util
             MaxDepth = Math.Max(MaxDepth, depth);
         }
 
-        /// <summary>
-        /// Sets the default value to use in <see cref="ByteTrie{T}.Find(byte[])"/> when no path matches.
-        /// </summary>
-        public void SetDefaultValue(T defaultValue) => _root.SetValue(defaultValue);
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() => throw new NotSupportedException();
 
-        IEnumerator<T> IEnumerable<T>.GetEnumerator() => throw new NotImplementedException();
-
-        IEnumerator IEnumerable.GetEnumerator() => throw new NotImplementedException();
+        IEnumerator IEnumerable.GetEnumerator() => throw new NotSupportedException();
     }
 }

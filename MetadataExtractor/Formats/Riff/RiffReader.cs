@@ -1,29 +1,4 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
-
-using System.Text;
-using MetadataExtractor.IO;
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 namespace MetadataExtractor.Formats.Riff
 {
@@ -44,61 +19,60 @@ namespace MetadataExtractor.Formats.Riff
         /// <summary>Processes a RIFF data sequence.</summary>
         /// <param name="reader">The <see cref="SequentialReader"/> from which the data should be read.</param>
         /// <param name="handler">The <see cref="IRiffHandler"/> that will coordinate processing and accept read values.</param>
-        /// <exception cref="RiffProcessingException">An error occurred during the processing of RIFF data that could not be ignored or recovered from.</exception>
-        /// <exception cref="System.IO.IOException">an error occurred while accessing the required data</exception>
         public void ProcessRiff(SequentialReader reader, IRiffHandler handler)
         {
-            // RIFF files are always little-endian
-            reader = reader.WithByteOrder(isMotorolaByteOrder: false);
+            try
+            {
+                // RIFF files are always little-endian
+                reader = reader.WithByteOrder(isMotorolaByteOrder: false);
 
-            // PROCESS FILE HEADER
+                // PROCESS FILE HEADER
 
-            var fileFourCc = reader.GetString(4, Encoding.ASCII);
-            if (fileFourCc != "RIFF")
-                throw new RiffProcessingException("Invalid RIFF header: " + fileFourCc);
+                var fileFourCc = reader.GetString(4, Encoding.ASCII);
+                if (fileFourCc != "RIFF")
+                    throw new RiffProcessingException("Invalid RIFF header: " + fileFourCc);
 
-            // The total size of the chunks that follow plus 4 bytes for the 'WEBP' or 'AVI ' FourCC
-            int fileSize = reader.GetInt32();
-            int sizeLeft = fileSize;
-            string identifier = reader.GetString(4, Encoding.ASCII);
-            sizeLeft -= 4;
+                // The total size of the chunks that follow plus 4 bytes for the 'WEBP' or 'AVI ' FourCC
+                int fileSize = reader.GetInt32();
+                int sizeLeft = fileSize;
+                string identifier = reader.GetString(4, Encoding.ASCII);
+                sizeLeft -= 4;
 
-            if (!handler.ShouldAcceptRiffIdentifier(identifier))
-                return;
+                if (!handler.ShouldAcceptRiffIdentifier(identifier))
+                    return;
 
-            ProcessChunks(reader, sizeLeft, handler);
+                var maxPosition = reader.Position + sizeLeft;
+                ProcessChunks(reader, maxPosition, handler);
+            }
+            catch (System.Exception e) when (e is ImageProcessingException or IOException)
+            {
+                handler.AddError(e.Message);
+            }
         }
 
         // PROCESS CHUNKS
-        public void ProcessChunks(SequentialReader reader, int sizeLeft, IRiffHandler handler)
+        private static void ProcessChunks(SequentialReader reader, long maxPosition, IRiffHandler handler)
         {
             // Processing chunks. Each chunk is 8 bytes header (4 bytes CC code + 4 bytes length of chunk) + data of the chunk
 
-            while (reader.Position < sizeLeft)
+            while (reader.Position < maxPosition - 8)
             {
-                // Check if end of the file is closer then 8 bytes
-                if (reader.IsCloserToEnd(8)) return;
-
                 string chunkFourCc = reader.GetString(4, Encoding.ASCII);
                 int chunkSize = reader.GetInt32();
 
-                sizeLeft -= 8;
-
                 // NOTE we fail a negative chunk size here (greater than 0x7FFFFFFF) as we cannot allocate arrays larger than this
-                if (chunkSize < 0 || sizeLeft < chunkSize)
+                if (chunkSize < 0 || chunkSize + reader.Position > maxPosition)
                     throw new RiffProcessingException("Invalid RIFF chunk size");
-
-                // Check if end of the file is closer then chunkSize bytes
-                if (reader.IsCloserToEnd(chunkSize)) return;
 
                 if (chunkFourCc == "LIST" || chunkFourCc == "RIFF")
                 {
+                    if (chunkSize < 4)
+                        break;
                     string listName = reader.GetString(4, Encoding.ASCII);
                     if (handler.ShouldAcceptList(listName))
-                        ProcessChunks(reader, sizeLeft - 4, handler);
+                        ProcessChunks(reader, reader.Position + chunkSize - 4, handler);
                     else
-                        reader.Skip(sizeLeft - 4);
-                    sizeLeft -= chunkSize;
+                        reader.Skip(chunkSize - 4);
                 }
                 else
                 {
@@ -112,13 +86,10 @@ namespace MetadataExtractor.Formats.Riff
                         reader.Skip(chunkSize);
                     }
 
-                    sizeLeft -= chunkSize;
-
                     // Skip any padding byte added to keep chunks aligned to even numbers of bytes
                     if (chunkSize % 2 == 1)
                     {
                         reader.Skip(1);
-                        sizeLeft--;
                     }
                 }
             }

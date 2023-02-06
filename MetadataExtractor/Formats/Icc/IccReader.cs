@@ -1,40 +1,6 @@
-#region License
-//
-// Copyright 2002-2019 Drew Noakes
-// Ported from Java to C# by Yakov Danilov for Imazen LLC in 2014
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-//
-// More information about this project is available at:
-//
-//    https://github.com/drewnoakes/metadata-extractor-dotnet
-//    https://drewnoakes.com/code/exif/
-//
-#endregion
+// Copyright (c) Drew Noakes and contributors. All Rights Reserved. Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using MetadataExtractor.Formats.Jpeg;
-using MetadataExtractor.IO;
-using MetadataExtractor.Util;
-
-#if NET35
-using DirectoryList = System.Collections.Generic.IList<MetadataExtractor.Directory>;
-#else
-using DirectoryList = System.Collections.Generic.IReadOnlyList<MetadataExtractor.Directory>;
-#endif
 
 namespace MetadataExtractor.Formats.Icc
 {
@@ -57,17 +23,17 @@ namespace MetadataExtractor.Formats.Icc
         // NOTE the header is 14 bytes, while "ICC_PROFILE" is 11
         private const int JpegSegmentPreambleLength = 14;
 
-        ICollection<JpegSegmentType> IJpegSegmentMetadataReader.SegmentTypes => new [] { JpegSegmentType.App2 };
+        ICollection<JpegSegmentType> IJpegSegmentMetadataReader.SegmentTypes { get; } = new[] { JpegSegmentType.App2 };
 
-        public DirectoryList ReadJpegSegments(IEnumerable<JpegSegment> segments)
+        public IEnumerable<Directory> ReadJpegSegments(IEnumerable<JpegSegment> segments)
         {
             // ICC data can be spread across multiple JPEG segments.
 
             // Skip any segments that do not contain the required preamble
-            var iccSegments = segments.Where(segment => segment.Bytes.Length > JpegSegmentPreambleLength && IsSubarrayEqualTo(segment.Bytes, 0, _jpegSegmentPreambleBytes)).ToList();
+            var iccSegments = segments.Where(segment => segment.Bytes.Length > JpegSegmentPreambleLength && segment.Bytes.StartsWith(_jpegSegmentPreambleBytes)).ToList();
 
             if (iccSegments.Count == 0)
-                return new Directory[0];
+                return Enumerable.Empty<Directory>();
 
             byte[] buffer;
             if (iccSegments.Count == 1)
@@ -117,7 +83,7 @@ namespace MetadataExtractor.Formats.Icc
                 if (model != 0)
                 {
                     directory.Set(IccDirectory.TagDeviceModel, model <= 0x20202020
-                        ? (object)model
+                        ? model
                         : GetStringFromUInt32(unchecked((uint)model)));
                 }
 
@@ -198,20 +164,6 @@ namespace MetadataExtractor.Formats.Icc
             };
 
             return Encoding.UTF8.GetString(b, 0, b.Length);
-        }
-
-        private static bool IsSubarrayEqualTo<T>(T[] source, int sourceIndex, T[] pattern) where T : notnull
-        {
-            if (sourceIndex + pattern.Length >= source.Length)
-                return false;
-
-            for (int i = sourceIndex, j = 0; j < pattern.Length; i++, j++)
-            {
-                if (!source[i].Equals(pattern[j]))
-                    return false;
-            }
-
-            return true;
         }
     }
 }
